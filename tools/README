@@ -1,0 +1,13 @@
+# wait-for-vdr-snd-release
+
+This program searches for a process in /proc/ whose cmdline program name
+(last part after the rightmost slash) is "vdr".
+If no process is found, it returns immediately. Otherwise it uses readlink to search
+for open file descriptors containing "/dev/snd".
+If at least one open file descriptor for a sound device is found,
+it waits up to 5 seconds for the vdr to release all sound devices, rechecking during this period.
+
+`wait-for-vdr-snd-release` requires permissions to access
+`/proc/$(pidof vdr)/fd` - e.g. by setting the setuid bit:
+
+sudo chmod 4755 /usr/bin/wait-for-vdr-snd-release
