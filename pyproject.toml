@@ -1,0 +1,23 @@
+[project]
+name = "yavdr-frontend"
+version = "0.1.0"
+description = "controls the frontend on a yavdr-ansible installation"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "jinja2>=3.1.6",
+    "pycairo>=1.28.0",
+    "pydantic>=2.11.5",
+    "pygobject>=3.52.3",
+    "ruamel-yaml>=0.18.12",
+    "sdbus>=0.14.0",
+]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "pygobject-stubs>=2.13.0",
+]
