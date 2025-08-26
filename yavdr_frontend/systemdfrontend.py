@@ -56,6 +56,11 @@ class SystemdUnit:
         self.status_monitor = asyncio.create_task(self.on_unit_change())
         return self
 
+    def __await__(self) -> Generator[Any, None, Self]:
+        return (
+            self.__async_init__().__await__()
+        )  # see https://stackoverflow.com/a/58976768
+
     async def on_unit_change(self):
         async for s in self.unit_proxy.properties_changed:
             p = parse_properties_changed(
@@ -125,7 +130,7 @@ class SystemdUnitFrontend(
         self.log.debug(
             f"Systemd Units: {await self.systemd_manager_proxy.list_units()}"
         )
-        self.unit = SystemdUnit(self.unit_name, self.systemd_dbus)
+        self.unit = await SystemdUnit(self.unit_name, self.systemd_dbus)
         self.unit_object_path = await self.systemd_manager_proxy.load_unit(
             self.unit_name
         )
