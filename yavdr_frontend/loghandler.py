@@ -1,9 +1,8 @@
 import logging
+from yavdr_frontend.config import LoggingEnum
 
 
-class LoggingHandler(object):
-    def __init__(self, loglevel=logging.INFO):
-        self.log = logging.getLogger(self.__class__.__name__)
-        self.log.info(f"setting loglevel to {loglevel}")
-        self.log.setLevel(loglevel)
-        self.log.debug("set Log Level to DEBUG")
+def create_log_handler(name: str, logLevel: LoggingEnum = LoggingEnum.INFO):
+    loghandler = logging.getLogger(name)
+    loghandler.setLevel(logLevel)
+    return loghandler

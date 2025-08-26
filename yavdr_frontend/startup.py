@@ -1,34 +1,39 @@
-import argparse
+import asyncio
 import logging
 
-from yavdr_frontend.config import load_yaml
-from yavdr_frontend.yavdr_frontend import export_frontend
+from yavdr_frontend.args import StartArgumentParser
+from yavdr_frontend.config import Config, load_yaml
+from yavdr_frontend.controller import Controller
+
+FORMAT = "[ %(filename)s:%(lineno)s: %(name)s.%(funcName)s() ] %(message)s"
 
 
-async def main():
-    parser = argparse.ArgumentParser(
-        description="a script to manage vdr and other frontends"
-    )
-    parser.add_argument(
-        "-l",
-        "--loglevel",
-        dest="loglevel",
-        default="DEBUG",
-        help="set the log level to [DEBUG|INFO|WARN|ERROR] (default: DEBUG)",
-    )
-    parser.add_argument(
-        "-c",
-        "--config",
-        dest="config",
-        default="config.yml",
-        help="set path for configuration file",
-    )
+def on_keypress(cmd: str): ...
 
-    args = parser.parse_args()
-    log_level = getattr(logging, args.loglevel, logging.DEBUG)
-    logging.basicConfig(level=log_level)
+
+async def create_and_publish_controller(config: Config):
+    # create the the Controller, which also publishes the DBus Interface
+
+    async with asyncio.TaskGroup():
+        controller = await Controller(config)  # type: ignore # noqa: F841  # this unused variable is needed to keep the object alive
+
+
+async def parse_args_and_run():
+    args = StartArgumentParser.parse_args()
+    logging.basicConfig(level=args.loglevel, format=FORMAT)
     config = load_yaml(args.config)
+    await create_and_publish_controller(config)
+
+
+def main():
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(parse_args_and_run())
+    logging.info("Startup complete. Press STRG + C to cancel ...")
     try:
-        await export_frontend(config)
+        loop.run_forever()
     except KeyboardInterrupt:
         pass
+
+
+if __name__ == "__main__":
+    main()

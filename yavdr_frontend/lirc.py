@@ -1,13 +1,25 @@
 import asyncio
+from collections.abc import Awaitable
 from functools import partial
 import logging
+from pathlib import Path
 import time
-from yavdr_frontend.loghandler import LoggingHandler
-from yavdr_frontend.config import Config, LircConfig, load_yaml
+from typing import NoReturn
+from collections.abc import Callable
+from yavdr_frontend.loghandler import create_log_handler
+from yavdr_frontend.config import (
+    Config,
+    KeymapConfig,
+    LircConfig,
+    LoggingEnum,
+    load_yaml,
+)
 
 
-class LircProtocol(asyncio.Protocol, LoggingHandler):
-    def __init__(self, config: LircConfig, on_keypress: callable):
+class LircProtocol(asyncio.Protocol):
+    def __init__(
+        self, config: LircConfig, on_keypress: Callable[[str], Awaitable[None]]
+    ):
         self.on_con_lost = asyncio.get_running_loop().create_future()
         self.buffer = b""
         self.last_key = "KEY_COFFEE"
@@ -16,13 +28,13 @@ class LircProtocol(asyncio.Protocol, LoggingHandler):
         self.keymap = config.keymap
         self.socket = config.socket
         self.on_keypress = on_keypress
-        super().__init__(loglevel=config.loglevel)
+        self.log = create_log_handler("LircProtocol", config.loglevel)
 
-    def connection_made(self, transport):
+    def connection_made(self, transport: asyncio.BaseTransport):
         self.log.debug(f"connected to {self.socket=}")
         return super().connection_made(transport)
 
-    def data_received(self, data):
+    def data_received(self, data: bytes):
         for line in data.decode().split("\n"):
             # TODO: do we need to care about incomplete lines?
             if not line:  # skip empty lines
@@ -45,7 +57,7 @@ class LircProtocol(asyncio.Protocol, LoggingHandler):
                     f"ignoring {repeats} times repeated keypress for {key_name}"
                 )
                 return
-            print(
+            self.log.debug(
                 f"{self.last_ts - timestamp=} <  {self.min_delta=} ? {(timestamp - self.last_ts) < self.min_delta}"
             )
             if (
@@ -55,27 +67,22 @@ class LircProtocol(asyncio.Protocol, LoggingHandler):
                 self.log.debug(f"ignoring keypress within min_delta for {key_name}")
                 return
             # TODO: do something with the keypress
-            self.log.debug(f"execute key action for {key_name}")
-            self.log.debug(f"{self.keymap.get(key_name)=}")
-            self.last_key = key_name
-            if action := self.keymap.get(key_name):
-                self.on_keypress(action)
+            asyncio.ensure_future(
+                self.on_keypress(key_name)
+            )  # https://groups.google.com/g/python-tulip/c/z-IVH5RoDzo/m/SpZc0zTuPJsJ
 
-    def error_received(self, exc):
-        print(f"Error received: {exc}")
+    def error_received(self, exc: Exception):
+        self.log.exception(f"Error received: {exc}")
 
-    def connection_lost(self, exc):
-        print(f"Connection closed: {exc}")
+    def connection_lost(self, exc: Exception | None):
+        self.log.info(f"Connection closed: {exc}")
         self.on_con_lost.set_result(True)
         raise ConnectionAbortedError("lircd socket vanished")
 
 
-async def handle_lirc_connection(on_keypress: callable, config: Config):
-    lirc_config = LircConfig(
-        socket="/run/lirc/lircd",
-        keymap={"KEY_OK": {"action": "ok_action"}},
-        loglevel="DEBUG",
-    )
+async def handle_lirc_connection(
+    on_keypress: Callable[[str], Awaitable[None]], config: Config
+) -> NoReturn:
     LircProtocolWithArgs = partial(
         LircProtocol,
         config=config.lirc,
@@ -84,21 +91,23 @@ async def handle_lirc_connection(on_keypress: callable, config: Config):
     loop = asyncio.get_running_loop()
     while True:
         try:
-            transport, protocol = await loop.create_unix_connection(
+            _transport, protocol = await loop.create_unix_connection(
                 LircProtocolWithArgs,
-                lirc_config.socket,
+                config.lirc.socket.__str__(),
             )
             await protocol.on_con_lost
         except (ConnectionAbortedError, IOError) as err:
-            print(f"could not establish connection to lircd socket: {err}")
-            await asyncio.sleep(0.5)
+            logging.debug(
+                f"{__name__}: could not establish connection to lircd socket: {err}"
+            )
+            await asyncio.sleep(1)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     config = load_yaml()
 
-    def on_key_callback(cmd: str):
+    async def on_key_callback(cmd: str):
         print(f"pressed {cmd}")
 
     asyncio.run(handle_lirc_connection(on_key_callback, config))
