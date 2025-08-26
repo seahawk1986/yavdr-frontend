@@ -431,7 +431,7 @@ class Controller(NeedsControllerProtocol):
         self.state = FrontendState.QUIT
         if (
             current_frontend := self.current_frontend
-        ) and await current_frontend.frontend_is_running() == FrontendStatusEnum.ACTIVE:
+        ) and await current_frontend.frontend_is_running():
             success, _msg = await self.stop()
             return success
         return True
