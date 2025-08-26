@@ -6,6 +6,7 @@ from sdbus.utils.parse import parse_properties_changed
 
 from yavdr_frontend.config import (
     DesktopAppFrontendConfig,
+    LoggingEnum,
     UnitFrontendConfig,
 )
 from yavdr_frontend.basicfrontend import FrontendProtocol
@@ -106,7 +107,7 @@ class SystemdUnitFrontend(
         self._is_running: bool = False
         self.stop_on_shutdown: bool = False
         self.name = config.unit_name
-        self.log = create_log_handler(self.name)
+        self.log = create_log_handler(name=self.name, logLevel=LoggingEnum.DEBUG)
         self.unit_name = (
             config.unit_name
             if config.unit_name.endswith(".service")
