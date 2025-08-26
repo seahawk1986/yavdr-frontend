@@ -349,7 +349,9 @@ class VDRController(FrontendProtocol):
             await self.controller.set_background(BackgroundType.NORMAL)
             user_active = await self.is_user_active() if self.do_startup else True
             self.log.debug(f"user is active: {user_active}")
-            self.log.debug(f"starting vdr frontend {self.frontend.name}")
+            self.log.debug(
+                f"starting vdr frontend {self.frontend.name}, current frontend is {self.frontend}"
+            )
             await self.frontend.start()
             if not user_active:
                 await self.dbus2vdr.vdr_shutdown.set_user_inactive()
