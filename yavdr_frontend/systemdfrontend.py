@@ -71,7 +71,7 @@ class SystemdUnit:
 
     def check_state(self, active_state: str, sub_state: str):
         match (active_state, sub_state):
-            case ("active", "running"):
+            case ("active", "running") | ("active", "active"):
                 self._is_running = True
                 self.log.debug(f"{self.unit_name} is running")
             case ("inactive", "dead") | ("failed", "dead"):
