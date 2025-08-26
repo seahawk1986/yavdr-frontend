@@ -33,7 +33,9 @@ def main():
     except KeyboardInterrupt:
         logging.info("stopping ...")
     finally:
+        logging.info("stop active frontend")
         loop.run_until_complete(controller.quit())
+        logging.info("stopped active frontend")
 
 
 if __name__ == "__main__":
