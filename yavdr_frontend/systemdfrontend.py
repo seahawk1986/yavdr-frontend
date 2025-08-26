@@ -169,7 +169,8 @@ class SystemdUnitFrontend(
 
     async def stop(self):
         self.log.debug(f"stopping {self.unit_name}")
-        await self.systemd_manager_proxy.stop_unit(self.unit_name, "replace")
+        job = await self.systemd_manager_proxy.stop_unit(self.unit_name, "replace")
+        self.log.debug(f"{job=}")
         await self.stopped()
 
     async def stopped(self):
