@@ -208,7 +208,7 @@ class Controller(NeedsControllerProtocol):
         Don't remove or self.controller.get_frontend called with two arguments won't work!
         """
         result = [
-            os.path.splitext(os.path.basename(unit[0]))[0]
+            os.path.basename(unit[0])
             for unit in await self.systemd_manager.list_unit_files()
         ]
         self.log.debug(f"get_systemd_unit_names(): {result}")
