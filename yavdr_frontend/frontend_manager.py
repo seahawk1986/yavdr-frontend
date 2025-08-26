@@ -67,7 +67,7 @@ async def system_frontend_factory(
                 # We got a frontend config and have to check it, so let's call this method recursively
                 return await system_frontend_factory(cfg, controller)
         elif (
-            name := config.name[: -len(".service")]
+            name := f"{config.name}.service"
             if not config.name.endswith(".service")
             else config.name
         ) in await controller.get_systemd_unit_names():
