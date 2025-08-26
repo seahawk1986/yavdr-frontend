@@ -77,6 +77,8 @@ class SystemdUnit:
             case ("inactive", "dead") | ("failed", "dead"):
                 self._is_running = False
                 self.log.debug(f"{self.unit_name} is stopped")
+            case ("deactivating", "stop-sigterm"):
+                self.log.debug(f"{self.unit_name} is stopping")
             case _:
                 self.log.warning(f"unhandled state: {active_state}, {sub_state}")
         return self._is_running
