@@ -15,9 +15,10 @@ async def create_and_publish_controller(config: Config):
     # create the the Controller, which also publishes the DBus Interface
 
     async with asyncio.TaskGroup():
-        controller = await Controller(config)  # type: ignore # noqa: F841  # this unused variable is needed to keep the object alive
-    await controller.quit()
-
+        try:
+            controller = await Controller(config)  # type: ignore # noqa: F841  # this unused variable is needed to keep the object alive
+        finally:
+            await controller.quit()
 
 async def parse_args_and_run():
     args = StartArgumentParser.parse_args()
