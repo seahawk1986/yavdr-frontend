@@ -66,7 +66,7 @@ class SystemdUnit:
             p = parse_properties_changed(
                 OrgFreedesktopSystemd1UnitInterface, s, "ignore"
             )
-            self.log.debug(p)
+            self.log.info(p)
             self.check_state(p.get("active_state", ""), p.get("sub_state", ""))
 
     def check_state(self, active_state: str, sub_state: str):
@@ -79,10 +79,8 @@ class SystemdUnit:
                 self.log.debug(f"{self.unit_name} is stopped")
             case ("deactivating", "stop-sigterm"):
                 self.log.debug(f"{self.unit_name} is stopping")
-            case ("", ""):
-                pass
             case _:
-                self.log.debug(f"unhandled state: {active_state}, {sub_state}")
+                self.log.warning(f"unhandled state: {active_state}, {sub_state}")
         return self._is_running
 
     async def is_running(self) -> bool:

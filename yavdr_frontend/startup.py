@@ -34,7 +34,7 @@ def main():
         logging.info("stopping ...")
     finally:
         logging.info("stop active frontend")
-        loop.run_until_complete(controller.stop())
+        loop.run_until_complete(controller.quit())
         logging.info("stopped active frontend")
 
 
