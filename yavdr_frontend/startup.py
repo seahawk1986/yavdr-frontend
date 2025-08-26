@@ -16,6 +16,7 @@ async def create_and_publish_controller(config: Config):
 
     async with asyncio.TaskGroup():
         controller = await Controller(config)  # type: ignore # noqa: F841  # this unused variable is needed to keep the object alive
+    await controller.quit()
 
 
 async def parse_args_and_run():
