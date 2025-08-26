@@ -32,9 +32,10 @@ async def system_frontend_factory(
 ) -> FrontendProtocol:
     global known_frontends
     frontend = None
+    # NOTE: we need to await the SystemUnitFrontend initialization to get the async operations done
     if isinstance(config, UnitFrontendConfig):
         unit_name = config.unit_name
-        frontend = SystemdUnitFrontend(
+        frontend = await SystemdUnitFrontend(
             UnitFrontendConfig(
                 unit_name=unit_name,
                 use_pasuspend=config.use_pasuspend,
@@ -46,7 +47,7 @@ async def system_frontend_factory(
     elif isinstance(config, DesktopAppFrontendConfig):
         unit_name = f"app@{config.app_name}.service"  # TODO: do we need to escape this?
         # unit_name = systemd_escape_app(app_name=config.app_name)
-        frontend = SystemdUnitFrontend(
+        frontend = await SystemdUnitFrontend(
             UnitFrontendConfig(
                 unit_name=unit_name,
                 use_pasuspend=config.use_pasuspend,
@@ -70,7 +71,7 @@ async def system_frontend_factory(
             if not config.name.endswith(".service")
             else config.name
         ) in await controller.get_systemd_unit_names():
-            return SystemdUnitFrontend(
+            return await SystemdUnitFrontend(
                 config=UnitFrontendConfig(
                     unit_name=name, use_pasuspend=config.use_pasuspend, bus=config.bus
                 ),
@@ -78,7 +79,7 @@ async def system_frontend_factory(
                 fe_type="unit",
             )
         else:
-            return SystemdUnitFrontend(
+            return await SystemdUnitFrontend(
                 config=UnitFrontendConfig(
                     unit_name=f"app@{config.name}.service",
                     use_pasuspend=config.use_pasuspend,
