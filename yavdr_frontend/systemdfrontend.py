@@ -156,7 +156,8 @@ class SystemdUnitFrontend(
 
     async def start(self):
         self.log.debug(f"starting {self.unit_name}")
-        await self.systemd_manager_proxy.start_unit(self.unit_name, "replace")
+        r = await self.systemd_manager_proxy.start_unit(self.unit_name, "replace")
+        self.log.debug(f"start result for {self.name}: {r}")
 
     async def started(self): ...
 
