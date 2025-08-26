@@ -1,0 +1,123 @@
+---
+main:
+    primary_frontend: vdr  # choose an application to start with
+    secondary_frontend: mediacenter  # choose the default value for the application to switch to
+    systemd_bus: SessionBus  # the bus used to control systemd units, SystemBus or SessionBus
+    interface_bus: SystemBus # the bus to provide yavdr-frontend's dbus interface on, SystemBus or SessionBus
+    # shutdown_ manager: vdr   # let VDR handle the shutdown of the system
+
+backgrounds:
+    detached:
+        path: "/usr/share/yavdr/images/yaVDR_background_detached.jpg"
+        fill: True
+    normal:
+        path: "/usr/share/yavdr/images/yavdr_logo.png"
+        fill: False
+    prepare_shutdown:
+        path: "/usr/share/yavdr/images/yaVDR_background_prepare_shutdown.png"
+        fill: True
+    shutdown:
+        path: "/usr/share/yavdr/images/yaVDR_background_shutdown.png"
+        fill: True
+  
+applications:  # predefined applications
+# Example Syntax:
+#   <APPLICATION>:
+#       name: foo  # if a system unit with this name exists, use it, else use the foo.desktop starter
+#       OR
+#       unit_name: foo.service  # use the unit foo.service
+#       OR
+#       app_name: foo.desktop  # use the foo.desktop starter, even if the systemd unit foo.service exists
+#       OR
+#       module_name: foo  # import python module foo
+#       class_name: Bar   # use the Class object Bar (which must implement the
+#                         # API defined by BasicFrontend in yavdr_frontend.basicfrontend)
+#       optionally you can set the bus the unit runs on:
+#       bus: SessionBus|SystemBus
+#       and you can suspend pulseaudio if necessary:
+#       use_pasuspend: True|False
+    vdr:
+        module_name: yavdr_frontend.vdr_controller
+        class_name: VDRController
+        use_pasuspend: False
+
+    mediacenter:
+        name: kodi
+        bus: SessionBus
+        use_pasuspend: False
+
+    browser:
+        name: firefox
+
+    terminal:
+        app_name: debian-xterm.desktop
+
+    #youtube:
+    #    unit_name: youtube.service
+
+vdr:
+    id: 0  # vdr instance id
+    dbus2vdr_bus: SystemBus  # the bus to communicate with the dbus2vdr plugin - SystemBus or SessionBus
+    attach_on_startup: auto  # choose one of auto, always or never
+    wakeup_ts_file: "/var/cache/vdr/acpiwakeup.time"
+    wakeup_delta_seconds: 600 # ten minutes by default
+    frontends:  # assign output plugins to a frontend implementation
+        softhddrm:
+            module_name: yavdr_frontend.frontends.softhddrm
+            class_name: Softhddrm
+            use_pasuspend: False  # suspend pulseaudio while softhddrm is active, so it has direct ALSA access
+
+        softhdcuvid:
+            module_name: yavdr_frontend.frontends.softhdcuvid
+            class_name: Softhdcuvid
+            use_pasuspend: False  # suspend pulseaudio while softhdcuvid is active, so it has direct ALSA access
+
+        softhdvaapi:
+            module_name: yavdr_frontend.frontends.softhdvaapi
+            class_name: Softhdvaapi
+            use_pasuspend: False  # suspend pulseaudio while softhddevice is active, so it has direct ALSA access
+
+        softhddevice:
+            module_name: yavdr_frontend.frontends.softhddevice
+            class_name: Softhddevice
+            use_pasuspend: False  # suspend pulseaudio while softhddevice is active, so it has direct ALSA access
+
+        vaapidevice:
+            module_name: yavdr_frontend.frontends.vaapidevice
+            class_name: VAAPIDevice
+            use_pasuspend: False  # suspend pulseaudio while softhddevice is active, so it has direct ALSA access
+
+        rpihddevice:
+            module_name: yavdr_frontend.frontends.rpihddevice
+            class_name: Rpihddevice
+
+        xineliboutput:
+            unit_name: vdr-sxfe.service
+
+        xine:
+            unit_name: vdr-xine.service
+
+lirc:
+    socket: /run/lirc/lircd
+    # min_delay: 0.3 # require at least 0.3 seconds between key presses
+    loglevel: DEBUG
+    keymap:
+        KEY_POWER2:
+            action: poweroff  # set to "yavdr_compat_poweroff" to mimic the behaviour of older yaVDR version
+
+#        KEY_PROG1:
+#            action: toggle  # start/stop the current frontend
+#        KEY_PROG2:
+#            action: switch  # switch between the primary and secondary frontend
+#        KEY_PROG3:
+#            action: switchbetween  # if one of the frontends is already running,
+#                                   # switch to the second one, else switch to the first one
+#            args:
+#                - vdr
+#                - mediacenter
+#        KEY_PROG4:
+#            action: switchbetween  # if one of the frontends is already running,
+#                                   # switch to the second one, else switch to the first one
+#            args:
+#                - vdr
+#                - youtube
