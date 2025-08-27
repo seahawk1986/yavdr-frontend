@@ -13,6 +13,11 @@ dependencies = [
     "sdbus>=0.14.0",
 ]
 
+[project.scripts]
+start-desktop = "yavdr_frontend:start_desktop.main"
+run-desktop = "yavdr_frontend:run_desktop.main"
+yavdr-frontend = "yavdr_frontend:__main__"
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
