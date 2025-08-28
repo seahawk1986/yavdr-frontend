@@ -14,6 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
+frontend-dbus-send = "yavdr_frontend:frontend_dbus_send.main"
 start-desktop = "yavdr_frontend:start_desktop.main"
 run-desktop = "yavdr_frontend:run_desktop.main"
 yavdr-frontend = "yavdr_frontend:startup.main"
