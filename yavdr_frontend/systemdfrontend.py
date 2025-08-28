@@ -30,13 +30,19 @@ from yavdr_frontend.interfaces.systemd_dbus_interface import (
 
 
 class SystemdUnit:
-    def __init__(self, unit_name: str, systemd_dbus: SdBus):
-        self.log = create_log_handler(f"SystemdUnit<{unit_name}>")
+    def __init__(
+        self,
+        unit_name: str,
+        systemd_dbus: SdBus,
+        frontend: "SystemdUnitFrontend",
+    ):
+        self.log = create_log_handler(f"SystemdUnit<{unit_name}>", LoggingEnum.DEBUG)
         self.unit_name = unit_name
         self.systemd_dbus = systemd_dbus
         self.systemd_manager_proxy = create_systemd_manager_proxy(
             bus=self.systemd_dbus,
         )
+        self.frontend = frontend
 
     async def __async_init__(self) -> Self:
         self.unit_object_path = await self.systemd_manager_proxy.load_unit(
@@ -66,28 +72,42 @@ class SystemdUnit:
             p = parse_properties_changed(
                 OrgFreedesktopSystemd1UnitInterface, s, "ignore"
             )
-            self.log.info(p)
-            self.check_state(p.get("active_state", ""), p.get("sub_state", ""))
+            try:
+                active_state = p["active_state"]
+                sub_state = p["sub_state"]
+            except AttributeError:
+                pass
+            else:
+                # self.log.info(p)
+                await self.check_state(active_state, sub_state)
 
-    def check_state(self, active_state: str, sub_state: str):
-        match (active_state, sub_state):
-            case ("active", "running") | ("active", "active"):
-                self._is_running = True
-                self.log.debug(f"{self.unit_name} is running")
-            case ("inactive", "dead") | ("failed", "dead") | ("failed", "failed"):
-                self._is_running = False
-                self.log.debug(f"{self.unit_name} is stopped")
-            case ("deactivating", "stop-sigterm"):
-                self._is_running = False
-                self.log.debug(f"{self.unit_name} is stopping")
-            case _:
-                self.log.warning(f"unhandled state: {active_state}, {sub_state}")
+    async def check_state(self, active_state: str, sub_state: str) -> bool:
+        self.log.debug(f"{active_state=}, {sub_state=}")
+        if active_state == "active" and sub_state in ("active", "running"):
+            self._is_running = True
+
+        elif active_state in ("inactive", "dead") and sub_state in ("dead, failed"):
+            self._is_running = False
+            await self.frontend.stopped()
+
+        # match (active_state, sub_state):
+        #     case ("active", "running") | ("active", "active"):
+        #         self._is_running = True
+        #         self.log.debug(f"{self.unit_name} is running")
+        #     case ("inactive", "dead") | ("failed", "dead") | ("failed", "failed"):
+        #         self._is_running = False
+        #         self.log.debug(f"{self.unit_name} is stopped")
+        #     case ("deactivating", "stop-sigterm"):
+        #         self._is_running = False
+        #         self.log.debug(f"{self.unit_name} is stopping")
+        #     case _:
+        #         self.log.warning(f"unhandled state: {active_state}, {sub_state}")
         return self._is_running
 
     async def is_running(self) -> bool:
         active_state = await self.unit_proxy.active_state
         sub_state = await self.unit_proxy.active_state
-        return self.check_state(active_state, sub_state)
+        return await self.check_state(active_state, sub_state)
 
 
 # TODO: create extra classes depending on if this is a foo.service or a app@foo.service
@@ -130,15 +150,15 @@ class SystemdUnitFrontend(
         # TODO: We might need to add rules to handle systemd-units for the system: https://wiki.archlinux.org/title/Polkit#Allow_management_of_individual_systemd_units_by_regular_users
 
     async def __async_init__(self) -> Self:
-        self.log.debug(
-            f"Systemd Units: {await self.systemd_manager_proxy.list_units()}"
-        )
-        self.unit = await SystemdUnit(self.unit_name, self.systemd_dbus)
+        # self.log.debug(
+        #     f"Systemd Units: {await self.systemd_manager_proxy.list_units()}"
+        # )
+        self.unit = await SystemdUnit(self.unit_name, self.systemd_dbus, self)
         self.unit_object_path = await self.systemd_manager_proxy.load_unit(
             self.unit_name
         )
         self.log.debug(f"got Unit path: {self.unit_object_path}")
-        self.status_monitor = asyncio.create_task(self.on_unit_change())
+        # self.status_monitor = asyncio.create_task(self.on_unit_change())
         return self
 
     def __await__(self) -> Generator[Any, None, Self]:
@@ -149,19 +169,21 @@ class SystemdUnitFrontend(
     async def frontend_is_running(self) -> bool:
         return await self.unit.is_running()
 
-    async def on_unit_change(self):
-        async for s in self.unit.unit_proxy.properties_changed:
-            p = parse_properties_changed(
-                OrgFreedesktopSystemd1UnitInterface, s, "ignore"
-            )
-            self.log.info(p)
-            self.unit.check_state(p.get("active_state", ""), p.get("sub_state", ""))
+    # async def on_unit_change(self):
+    #     async for s in self.unit.unit_proxy.properties_changed:
+    #         p = parse_properties_changed(
+    #             OrgFreedesktopSystemd1UnitInterface, s, "ignore"
+    #         )
+    #         self.log.info(p)
+    #         await self.unit.check_state(
+    #             p.get("active_state", ""), p.get("sub_state", "")
+    #         )
 
-            # if (
-            #     p.get("active_state") == active_state
-            #     and p.get("sub_state") == sub_state
-            # ):
-            # return
+    #         # if (
+    #         #     p.get("active_state") == active_state
+    #         #     and p.get("sub_state") == sub_state
+    #         # ):
+    #         # return
 
     async def start(self):
         self.log.debug(f"starting {self.unit_name}")
