@@ -239,7 +239,7 @@ class VDRController(FrontendProtocol):
         Don't remove or self.controller.get_frontend called with two arguments won't work!
         """
         return [
-            os.path.splitext(os.path.basename(unit[0]))[0]
+            os.path.basename(unit[0])
             for unit in await self.systemd_manager_proxy.list_unit_files()
         ]
 
