@@ -23,7 +23,9 @@ def systemd_escape_app(app_name: str):
     result = subprocess.run(
         ["systemd-escape", "--template=app@.service", app_name],
         universal_newlines=True,
+        capture_output=True,
     )
+    print(result)
     return result.stdout.strip()
 
 
@@ -45,8 +47,8 @@ async def system_frontend_factory(
             fe_type="unit",
         )
     elif isinstance(config, DesktopAppFrontendConfig):
-        unit_name = f"app@{config.app_name}.service"  # TODO: do we need to escape this?
-        # unit_name = systemd_escape_app(app_name=config.app_name)
+        # unit_name = f"app@{config.app_name}.service"  # TODO: do we need to escape this?
+        unit_name = systemd_escape_app(app_name=config.app_name)
         frontend = await SystemdUnitFrontend(
             UnitFrontendConfig(
                 unit_name=unit_name,
@@ -81,7 +83,7 @@ async def system_frontend_factory(
         else:
             return await SystemdUnitFrontend(
                 config=UnitFrontendConfig(
-                    unit_name=f"app@{config.name}.service",
+                    unit_name=systemd_escape_app(app_name=config.name),
                     use_pasuspend=config.use_pasuspend,
                     bus=config.bus,
                 ),
