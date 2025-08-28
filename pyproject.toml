@@ -16,7 +16,7 @@ dependencies = [
 [project.scripts]
 start-desktop = "yavdr_frontend:start_desktop.main"
 run-desktop = "yavdr_frontend:run_desktop.main"
-yavdr-frontend = "yavdr_frontend:__main__"
+yavdr-frontend = "yavdr_frontend:startup.main"
 
 [build-system]
 requires = ["setuptools"]

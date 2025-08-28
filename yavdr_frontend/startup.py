@@ -5,7 +5,7 @@ from yavdr_frontend.args import StartArgumentParser
 from yavdr_frontend.config import load_yaml
 from yavdr_frontend.controller import Controller
 
-FORMAT = "[ %(filename)s:%(lineno)s: %(name)s.%(funcName)s() ] %(message)s"
+FORMAT = "%(filename)s:%(lineno)s:%(name)s.%(funcName)s(): %(message)s"
 
 
 def on_keypress(cmd: str): ...
