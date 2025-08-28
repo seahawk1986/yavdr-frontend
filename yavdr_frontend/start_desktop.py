@@ -34,6 +34,7 @@ async def start_desktop(path: str, args: list[str]):
     path = os.path.splitext(os.path.basename(path))[0]
     await fe.switchto(path)
 
+
 def main():
     parser = ArgumentParser(description="start .desktop files programmatically")
     parser.add_argument(
