@@ -23,7 +23,6 @@ from yavdr_frontend.basicfrontend import BasicFrontend
 
 from yavdr_frontend.protocols.frontend_protocols import (
     FrontendProtocol,
-    FrontendStatusEnum,
     StartupStateEnum,
 )
 from yavdr_frontend.frontend_manager import system_frontend_factory
@@ -211,7 +210,7 @@ class Controller(NeedsControllerProtocol):
             os.path.basename(unit[0])
             for unit in await self.systemd_manager.list_unit_files()
         ]
-        self.log.debug(f"get_systemd_unit_names(): {result}")
+        # self.log.debug(f"get_systemd_unit_names(): {result}")
         return result
 
     async def get_systemd_env(self) -> dict[str, str]:
