@@ -8,7 +8,6 @@ dependencies = [
     "jinja2>=3.1.6",
     "pydantic>=2.11.5",
     "pygobject>=3.52.3",
-    "pygobject-stubs>=2.13.0",
     "ruamel-yaml>=0.18.12",
     "sdbus>=0.14.0",
 ]
