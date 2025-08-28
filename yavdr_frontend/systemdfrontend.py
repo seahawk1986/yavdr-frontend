@@ -90,6 +90,7 @@ class SystemdUnit:
             self._is_running = False
             await self.frontend.stopped()
 
+        # TODO: remove this section if unneeded
         # match (active_state, sub_state):
         #     case ("active", "running") | ("active", "active"):
         #         self._is_running = True
@@ -169,21 +170,6 @@ class SystemdUnitFrontend(
     async def frontend_is_running(self) -> bool:
         return await self.unit.is_running()
 
-    # async def on_unit_change(self):
-    #     async for s in self.unit.unit_proxy.properties_changed:
-    #         p = parse_properties_changed(
-    #             OrgFreedesktopSystemd1UnitInterface, s, "ignore"
-    #         )
-    #         self.log.info(p)
-    #         await self.unit.check_state(
-    #             p.get("active_state", ""), p.get("sub_state", "")
-    #         )
-
-    #         # if (
-    #         #     p.get("active_state") == active_state
-    #         #     and p.get("sub_state") == sub_state
-    #         # ):
-    #         # return
 
     async def start(self):
         self.log.debug(f"starting {self.unit_name}")
