@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 from yavdr_frontend.config import LoggingEnum
 
@@ -18,5 +19,6 @@ StartArgumentParser.add_argument(
     "--config",
     dest="config",
     default="config.yml",
+    type=Path,
     help="set path for configuration file",
 )
