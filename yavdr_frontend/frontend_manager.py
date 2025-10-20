@@ -25,7 +25,7 @@ def systemd_escape_app(app_name: str):
         universal_newlines=True,
         capture_output=True,
     )
-    print(result)
+    # print(result)
     return result.stdout.strip()
 
 
