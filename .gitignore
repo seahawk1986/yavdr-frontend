@@ -4,3 +4,4 @@
 tools/wait-for-vdr-snd-release
 __pycache__/*
 *.ex
+*.egg-info/*
