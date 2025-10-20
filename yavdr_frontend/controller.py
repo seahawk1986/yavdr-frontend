@@ -298,6 +298,11 @@ class Controller(NeedsControllerProtocol):
     async def on_stopped(self, caller: FrontendProtocol):
         """this is the callback function after a frontend has been stopped"""
         # TODO: call hooks
+        if self.current_frontend and caller.name != self.current_frontend.name:
+            self.log.debug(
+                f"stop signal for {caller.name} not from current frontend ({self.current_frontend.name}), ignoring ..."
+            )
+            return
         self.log.debug("caller %s has been stopped", caller.name)
         self.interface.frontend_changed.emit((caller.name, "stopped"))
         # self.FrontendChanged(caller.name, "stopped") # TODO: remove
