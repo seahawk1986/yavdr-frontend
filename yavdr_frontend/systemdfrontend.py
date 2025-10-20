@@ -2,10 +2,8 @@ import asyncio
 from collections.abc import Generator
 from typing import Any, Protocol, Self, TYPE_CHECKING
 from sdbus import SdBus
-from sdbus.utils.parse import parse_properties_changed
 
 from yavdr_frontend.config import (
-    DesktopAppFrontendConfig,
     LoggingEnum,
     UnitFrontendConfig,
 )
@@ -43,23 +41,19 @@ class SystemdUnit:
             bus=self.systemd_dbus,
         )
         self.frontend = frontend
+        self.unit_stop_tracker: None | asyncio.Task[None] = None
 
     async def __async_init__(self) -> Self:
+        # await self.systemd_manager_proxy.subscribe()
         self.unit_object_path = await self.systemd_manager_proxy.load_unit(
             self.unit_name
         )
         self.unit_proxy = OrgFreedesktopSystemd1UnitInterface.new_proxy(
             SYSTEMD_DBUS_INTERFACE, self.unit_object_path, bus=self.systemd_dbus
         )
-        self._is_running: bool = (
-            True
-            if (
-                await self.unit_proxy.active_state == "active"
-                and await self.unit_proxy.active_state == "running"
-            )
-            else False
-        )
-        self.status_monitor = asyncio.create_task(self.on_unit_change())
+        # INFO: we need to call the Subscribe() method for the org.freedesktop.systemd1.Manager interface on the /org/freedesktop/systemd1 object once.
+        # this happens in the SystemdUnitFrontend class, so we don't have to do it here
+        self._is_running: bool = await self.get_status()
         return self
 
     def __await__(self) -> Generator[Any, None, Self]:
@@ -67,48 +61,74 @@ class SystemdUnit:
             self.__async_init__().__await__()
         )  # see https://stackoverflow.com/a/58976768
 
-    async def on_unit_change(self):
-        async for s in self.unit_proxy.properties_changed:
-            p = parse_properties_changed(
-                OrgFreedesktopSystemd1UnitInterface, s, "ignore"
-            )
-            try:
-                active_state = p["active_state"]
-                sub_state = p["sub_state"]
-            except AttributeError:
-                pass
-            else:
-                # self.log.info(p)
-                await self.check_state(active_state, sub_state)
+    async def track_job(self, current_job_path: str):
+        async for (
+            job_id,
+            job_path,
+            unit_name,
+            result,
+        ) in self.systemd_manager_proxy.job_removed:
+            if current_job_path == job_path:
+                self.log.debug(f"job {job_path} ended: {result}")
+                if result != "done":
+                    self.log.error(
+                        f"job {job_path} with id: {job_id} for {unit_name} ended: {result}"
+                    )
+                else:
+                    if self.unit_stop_tracker is None:
+                        print(f"adding tracker for {self.unit_name}")
+                        self.unit_stop_tracker = asyncio.create_task(
+                            self.on_unit_removed()
+                        )
+                return result == "done"  # only in this case the job was successful
+
+    async def start(self):
+        current_job_path = await self.systemd_manager_proxy.start_unit(
+            self.unit_name, "replace"
+        )
+        return await self.track_job(current_job_path=current_job_path)
+
+    async def stop(self):
+        current_job_path = await self.systemd_manager_proxy.stop_unit(
+            self.unit_name, "replace"
+        )
+        return await self.track_job(current_job_path=current_job_path)
+
+    async def on_unit_removed(self):
+        async for unit_name, unit_path in self.systemd_manager_proxy.unit_removed:
+            if self.unit_object_path == unit_path:
+                self.log.debug(f"{unit_path} ({unit_name}) removed, done")
+                self.unit_stop_tracker = None
+                await (
+                    self.frontend.stopped()
+                )  # this signals the controller that the unit was stopped
+                return
 
     async def check_state(self, active_state: str, sub_state: str) -> bool:
         self.log.debug(f"{active_state=}, {sub_state=}")
         if active_state == "active" and sub_state in ("active", "running"):
             self._is_running = True
 
-        elif active_state in ("inactive", "dead") and sub_state in ("dead, failed"):
+        elif active_state in ("inactive", "dead", "failed") and sub_state in (
+            "dead, failed"
+        ):
             self._is_running = False
-            await self.frontend.stopped()
-
-        # TODO: remove this section if unneeded
-        # match (active_state, sub_state):
-        #     case ("active", "running") | ("active", "active"):
-        #         self._is_running = True
-        #         self.log.debug(f"{self.unit_name} is running")
-        #     case ("inactive", "dead") | ("failed", "dead") | ("failed", "failed"):
-        #         self._is_running = False
-        #         self.log.debug(f"{self.unit_name} is stopped")
-        #     case ("deactivating", "stop-sigterm"):
-        #         self._is_running = False
-        #         self.log.debug(f"{self.unit_name} is stopping")
-        #     case _:
-        #         self.log.warning(f"unhandled state: {active_state}, {sub_state}")
         return self._is_running
 
     async def is_running(self) -> bool:
         active_state = await self.unit_proxy.active_state
         sub_state = await self.unit_proxy.active_state
         return await self.check_state(active_state, sub_state)
+
+    async def get_status(self):
+        return (
+            True
+            if (
+                await self.unit_proxy.active_state == "active"
+                and await self.unit_proxy.active_state == "running"
+            )
+            else False
+        )
 
 
 # TODO: create extra classes depending on if this is a foo.service or a app@foo.service
@@ -144,22 +164,22 @@ class SystemdUnitFrontend(
         )
         self.fe_type = fe_type
         self.controller = controller
-        self.systemd_dbus = get_bus(config.bus)
+        self.systemd_bus = get_bus(config.bus)
         self.systemd_manager_proxy = create_systemd_manager_proxy(
-            bus=self.systemd_dbus,
+            bus=self.systemd_bus,
         )
+
+        self.last_status_signal = ("", "")
+        self.is_active = False
+        self._was_started = False
+
         # TODO: We might need to add rules to handle systemd-units for the system: https://wiki.archlinux.org/title/Polkit#Allow_management_of_individual_systemd_units_by_regular_users
 
     async def __async_init__(self) -> Self:
-        # self.log.debug(
-        #     f"Systemd Units: {await self.systemd_manager_proxy.list_units()}"
-        # )
-        self.unit = await SystemdUnit(self.unit_name, self.systemd_dbus, self)
-        self.unit_object_path = await self.systemd_manager_proxy.load_unit(
-            self.unit_name
+        await self.systemd_manager_proxy.subscribe()
+        self.unit = await SystemdUnit(
+            unit_name=self.unit_name, systemd_dbus=self.systemd_bus, frontend=self
         )
-        self.log.debug(f"got Unit path: {self.unit_object_path}")
-        # self.status_monitor = asyncio.create_task(self.on_unit_change())
         return self
 
     def __await__(self) -> Generator[Any, None, Self]:
@@ -172,141 +192,25 @@ class SystemdUnitFrontend(
 
 
     async def start(self):
+        self.is_active = True
         self.log.debug(f"starting {self.unit_name}")
-        job = await self.systemd_manager_proxy.start_unit(self.unit_name, "replace")
-        self.log.debug(f"start result for {self.name}: {job}")
+        _success = await self.unit.start()
 
     async def started(self): ...
 
     async def stop(self):
+        self.is_active = False
         self.log.debug(f"stopping {self.unit_name}")
-        job = await self.systemd_manager_proxy.stop_unit(self.unit_name, "replace")
-        self.log.debug(f"{job=}")
-        await self.stopped()
+        _success = await self.unit.stop()
 
     async def stopped(self):
+        # TODO: we need to switch frontends if the systemd unit exited normally
+        #       And avoid restarting it instead
         self.log.debug(f"stopped {self.name}")
         await self.controller.on_stopped(self)
-
-    async def status_message(self, status: str): ...
-
-
-class SystemdAppUnitFrontend(FrontendProtocol, SystemdUnitProtocol):
-    config: DesktopAppFrontendConfig
-
-    def __init__(
-        self,
-        config: DesktopAppFrontendConfig,
-        controller: "Controller | None" = None,
-        fe_type: str = "",  # TODO: this should be an enum
-    ):
-        self._is_running = False
-        self.stop_on_shutdown: bool = False
-        self.name = config.app_name
-        self.unit_name = config.app_name
-        self.log = create_log_handler(self.unit_name)
-        self.fe_type = fe_type
-        self.systemd_dbus = get_bus(config.bus)
-        self.systemd_manager_proxy = create_systemd_manager_proxy(
-            bus=self.systemd_dbus,
+        self.is_active = (
+            False  # TODO: is this correct or can a unit be restarted in this case?
         )
-        # TODO: We might need to add rules to handle systemd-units for the system: https://wiki.archlinux.org/title/Polkit#Allow_management_of_individual_systemd_units_by_regular_users
 
-
-# class SystemdUnitFrontend(FrontendProtocol):
-#     def __init__(
-#         self, controller: Controller, name: str = "SystemdUnit", fe_type: str = "unit"
-#     ):
-#         self.name = name
-#         self.log = create_log_handler(self.name)
-#         self.fe_type = fe_type
-#         self.controller = controller
-#         self.log.debug("init SystemdUnit with name: %s and fe_type: %s", name, fe_type)
-#         self.systemd = controller.systemd_manager
-
-#     async def __async_init__(self) -> Self:
-#         try:
-#             await self.set_unit_name()
-#         except ValueError:
-#             raise
-#         except Exception as e:
-#             self.log.exception(e, exc_info=True)
-#         return self
-
-#     async def set_unit_name(self):
-#         if self.fe_type == "app":
-#             self.unit_name = subprocess.check_output(
-#                 ["systemd-escape", "--template=app@.service", self.name],
-#                 universal_newlines=True,
-#             ).rstrip()
-#         else:
-#             if not self.name.endswith(".service"):
-#                 self.unit_name = self.name + ".service"
-#             else:
-#                 self.unit_name = self.name
-#             if (
-#                 os.path.splitext(self.unit_name)[0]
-#                 not in await self.controller.get_systemd_unit_names()
-#             ):
-#                 raise ValueError(
-#                     (f"unknown unit name {self.unit_name}, check your config!")
-#                 )
-#         self.log.debug(f"set_unit_name: {self.unit_name}")
-
-#     async def start(self):
-#         self.log.debug(f"starting {self.name}")
-#         self.add_signal_callback(self.on_signal)
-#         try:
-#             await self.systemd.start_unit(self.unit_name, "fail")
-#         except Exception as e:
-#             self.log.exception(e)
-
-#     async def stop(self):
-#         self.log.debug(f"stopping {self.name}")
-#         try:
-#             await self.systemd.stop_unit(self.unit_name, "fail")
-#         except Exception as e:
-#             self.log.exception(e)
-
-#     async def stopped(self):
-#         self.log.debug(f"stopped {self.name}")
-#         self.remove_signal_callback()
-#         await super().stopped()
-
-#     def add_signal_callback(self, callback):
-#         self.log.debug(f"enable PropertiesChanged callback for {self.name}")
-#         self.unit_proxy = self.controller.bus.get(
-#             ".systemd1", self.systemd.LoadUnit(self.unit_name)
-#         )
-#         self.pchanged_con = self.unit_proxy.PropertiesChanged.connect(callback)
-
-#     def remove_signal_callback(self):
-#         self.log.debug(f"disable PropertiesChanged callback for {self.name}")
-#         self.pchanged_con.disconnect()
-
-#     def on_signal(self, *args):
-#         """
-#         Callback executed on PropertiesChanged Signal.
-
-#         Since systemd's signal data in Ubuntu 20.04 (systemd-244) are not representing
-#         the actual property values (e.g. wrongly reporting that a unit is dead if starting up):
-
-#         ActiveState Signal: inactive
-#         SubState Signal: dead
-#         vs.
-#         ActiveState Property: activating
-#         SubState Property: start-pre
-
-#         we can ignore them completely and rely on the actual property values.
-#         """
-
-#         self.log.debug(f"got PropertiesChanged signal: {args}", args)
-
-#         active_state = self.unit_proxy.active_state
-#         sub_state = self.unit_proxy.sub_state
-#         if active_state == "active" and sub_state == "running":
-#             self.log.debug("unit is running")
-#             await self.started()
-#         elif (active_state, sub_state) in (("inactive", "dead"), ("failed", "dead")):
-#             self.log.debug(f"unit {self.unit_name} stopped")
-#             await self.stopped()
+    async def status_message(self, status: str) -> None:
+        raise NotImplementedError()
