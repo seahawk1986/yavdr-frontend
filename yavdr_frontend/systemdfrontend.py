@@ -26,6 +26,13 @@ from yavdr_frontend.interfaces.systemd_dbus_interface import (
     SYSTEMD_DBUS_INTERFACE,
 )
 
+# basic idea:
+# ehen starting a unit, systemd uses a job to keep track of the start process
+# when the job ends, we know, if it succeeded
+# when the unit is stopped, there is also a job created for this
+# Also we track the UnitRemoved Signal on the SystemdManager interface to know when a Unit was stopped (either via Systemd or via User interaction)
+# Systemd PropertiesChanged signals are unreliable and event UnitRemoved Signals might occure more than once.
+
 
 class SystemdUnit:
     def __init__(
