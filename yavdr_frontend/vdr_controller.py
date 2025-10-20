@@ -113,7 +113,6 @@ class VDRController(FrontendProtocol):
     def __init__(
         self, controller: "Controller", name: str = "VDR-Frontend", fe_type: str = "vdr"
     ):
-        self._state = StartupStateEnum.PREPARE
         self.controller = controller
         self.config = controller.config
         self.name = name
@@ -429,8 +428,8 @@ class VDRController(FrontendProtocol):
         if start_t == StartType.UNKNOWN:
             return
         else:
-            self._state = StartupStateEnum.REGULAR
-            self.log.debug(f"setting {self._state=:s}")
+            self._statup_state = StartupStateEnum.REGULAR
+            self.log.debug(f"setting {self._startup_state=:s}")
             # self.start = self._start  # switch to the regular start method
 
         startup = self.controller.config.vdr.attach_on_startup
