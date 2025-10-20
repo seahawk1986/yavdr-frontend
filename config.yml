@@ -93,9 +93,11 @@ vdr:
 
         xineliboutput:
             unit_name: vdr-sxfe.service
+            bus: SessionBus
 
         xine:
             unit_name: vdr-xine.service
+            bus: SessionBus
 
 lirc:
     socket: /run/lirc/lircd
