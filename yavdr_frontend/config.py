@@ -1,6 +1,5 @@
 import enum
 import logging
-import os
 from pathlib import Path
 from pydantic import (
     BaseModel,
@@ -126,15 +125,15 @@ class Config(BaseModel):
     lirc: LircConfig
 
 
-def load_yaml(configfile: str = "config.yml"):
+def load_yaml(configfile: Path = Path("config.yml")):
     yaml = YAML()
     for cfgfile in (
         configfile,
-        os.path.expanduser("~/.config/yavdr-frontend/config.yml"),
-        "/etc/yavdr-frontend/config.yml",
+        Path.home() / "/.config/yavdr-frontend/config.yml",
+        Path("/etc/yavdr-frontend/config.yml"),
     ):
         try:
-            print(f"try to read {cfgfile}")
+            print(f"try to read {cfgfile.absolute()}")
             config = Config.model_validate(yaml.load(Path(cfgfile)))  # type: ignore
         except FileNotFoundError:
             # print(f"could not find {Path(cfgfile).absolute()}", file=sys.stderr)
