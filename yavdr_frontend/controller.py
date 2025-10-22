@@ -114,7 +114,17 @@ class Controller(NeedsControllerProtocol):
             case _:
                 raise ValueError("unsupported shutdown handler configured")
 
-        self.vdr_status: VDRStatusProtocol = DBus2VDRStatusHandler(self.config.vdr)
+        self.vdr_status: VDRStatusProtocol = DBus2VDRStatusHandler(
+            on_start=self.on_vdr_start, on_stop=self.on_vdr_stop, config=self.config.vdr
+        )
+
+    async def on_vdr_start(self) -> None:
+        if self.current_frontend and self.current_frontend.name == "vdr":
+            await self.start()
+
+    async def on_vdr_stop(self) -> None:
+        if self.current_frontend and self.current_frontend.name == "vdr":
+            await self.stop()
 
     async def __async_init__(self) -> Self:
         self.log.debug("exporting the Interface to the bus")
