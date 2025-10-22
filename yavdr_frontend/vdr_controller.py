@@ -1,9 +1,10 @@
 from abc import abstractmethod
 import asyncio
-from collections.abc import Generator
+from collections.abc import Awaitable, Generator
 import enum
 import os
 import time
+from collections.abc import Callable
 from typing import Any, NamedTuple, Protocol, Self, cast, TYPE_CHECKING
 
 from sdbus.utils.parse import parse_properties_changed
@@ -477,9 +478,23 @@ class VDRController(FrontendProtocol):
 
 class VDRStatusProtocol(Protocol):
     @abstractmethod
+    def __init__(
+        self,
+        on_start: Callable[[], Awaitable[None]],
+        on_stop: Callable[[], Awaitable[None]],
+    ): ...
+
+    def __await__(self) -> Generator[Any, None, Self]:  # noqa: F821
+        return (
+            self.__async_init__().__await__()
+        )  # see https://stackoverflow.com/a/58976768
+
+    @abstractmethod
+    async def __async_init__(self) -> Self: ...
+
+    @abstractmethod
     async def is_running(self) -> bool:
         ...
-
         #     if config.vdr_status == VDRStatusEnum.SYSTEMD:
         #     self.vdr_unit = OrgFreedesktopSystemd1UnitInterface(
         #         "org.freedesktop.systemd1",
@@ -497,7 +512,15 @@ class NameOwnerChangedSignal(NamedTuple):
 
 
 class DBus2VDRStatusHandler(VDRStatusProtocol):
-    def __init__(self, config: VDRConfig, loglevel: LoggingEnum = LoggingEnum.INFO):
+    def __init__(
+        self,
+        on_start: Callable[[], Awaitable[None]],
+        on_stop: Callable[[], Awaitable[None]],
+        config: VDRConfig,
+        loglevel: LoggingEnum = LoggingEnum.INFO,
+    ):
+        self.on_start = on_start
+        self.on_stop = on_stop
         self.config = config
         self.bus = get_bus(config.dbus2vdr_bus)
         self.vdr_name = f"de.tvdr.vdr{'' if self.config.id == 0 else self.config.id}"
@@ -516,6 +539,10 @@ class DBus2VDRStatusHandler(VDRStatusProtocol):
             "org.freedesktop.DBus", "/org/Freedesktop/DBus", self.bus
         )
 
+    async def __async_init__(self) -> Self:
+        self.watcher = asyncio.create_task(self.track_name_owner_changed())
+        return self
+
     async def is_running(self) -> bool:
         self.log.debug(f"{await self.vdr_status.status()=}")
         return (await self.vdr_status.status()) == "Ready"
@@ -529,9 +556,11 @@ class DBus2VDRStatusHandler(VDRStatusProtocol):
             if signal.name == self.vdr_name and len(signal.old_owner) == 0:
                 self.vdr_bus_owner = signal.new_owner
                 print("dbus2vdr appeared on the bus")
+                await self.on_start()
             elif len(signal.new_owner) == 0 and signal.old_owner == self.vdr_bus_owner:
                 self.vdr_bus_owner = ""
                 print(print("dbus2vdr disappeared from the bus"))
+                await self.on_stop()
 
 
 # TODO: do we need this? The disadvantage of a systemd-based status handling is
