@@ -23,6 +23,7 @@ async def dbus_send():
         for child in root.findall(
             f'.//method/..[@name="{YAVDR_FRONTEND_BUS_NAME}.Controller"]'
         ):
+            # print(ET.tostring(child).decode())
             for method in child.findall("./method"):
                 method_args = [
                     arg.attrib["type"]
@@ -35,7 +36,7 @@ async def dbus_send():
                 print(
                     method.get("name"),
                     "arguments:",
-                    ", ".join(method_args),
+                    method_args,
                     "-> response:",
                     result,
                 )
