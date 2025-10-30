@@ -183,7 +183,7 @@ class SystemdUnitFrontend(
         # TODO: We might need to add rules to handle systemd-units for the system: https://wiki.archlinux.org/title/Polkit#Allow_management_of_individual_systemd_units_by_regular_users
 
     async def __async_init__(self) -> Self:
-        await self.systemd_manager_proxy.subscribe()
+        # await self.systemd_manager_proxy.subscribe()
         self.unit = await SystemdUnit(
             unit_name=self.unit_name, systemd_dbus=self.systemd_bus, frontend=self
         )
