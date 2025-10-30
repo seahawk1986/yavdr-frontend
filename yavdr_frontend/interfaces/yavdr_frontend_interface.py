@@ -177,7 +177,7 @@ class yaVDRFrontendInterface(
 
     @dbus_method_async(result_signature="b", flags=sdbus.DbusUnprivilegedFlag)
     async def shutdown_successfull(self):
-        return await self.controller.shutdown_successfull()
+        return await self.controller.on_vdr_shutdown_successfull()
         #         <method name='shutdown_successfull'>
         #             <arg type='b' name='response' direction='out'/>
         #         </method>
