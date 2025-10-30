@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 from yavdr_frontend.systemdfrontend import SystemdUnitFrontend
 from yavdr_frontend.tools import get_object_from_module
 
-known_frontends: dict[str, FrontendProtocol] = {}
+known_frontends: dict[FrontendConfig, FrontendProtocol] = {}
 
 
 def systemd_escape_app(app_name: str):
@@ -33,7 +33,8 @@ async def system_frontend_factory(
     config: FrontendConfig, controller: "Controller | VDRController"
 ) -> FrontendProtocol:
     global known_frontends
-    frontend = None
+    if frontend := known_frontends.get(config):
+        return frontend
     # NOTE: we need to await the SystemUnitFrontend initialization to get the async operations done
     if isinstance(config, UnitFrontendConfig):
         unit_name = config.unit_name
@@ -68,6 +69,7 @@ async def system_frontend_factory(
             if cfg := controller.config.applications.get(config.name):
                 # We got a frontend config and have to check it, so let's call this method recursively
                 return await system_frontend_factory(cfg, controller)
+
         elif (
             name := f"{config.name}.service"
             if not config.name.endswith(".service")
@@ -93,4 +95,5 @@ async def system_frontend_factory(
 
     if not frontend:
         raise ValueError("Unknown Frontend")
+    known_frontends[config] = frontend
     return frontend
