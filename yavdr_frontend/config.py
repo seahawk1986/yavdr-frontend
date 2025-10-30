@@ -54,10 +54,29 @@ class NamedFrontend(BaseModel):
     use_pasuspend: bool = Field(default=False)
     bus: DBusEnum = Field(default=DBusEnum.SessionBus)
 
+    def __hash__(self) -> NonNegativeInt:
+        return hash(
+            (
+                "NamedFrontend",
+                self.name,
+                self.use_pasuspend,
+            )
+        )
+
+
 class DesktopAppFrontendConfig(BaseModel):
     app_name: str
     use_pasuspend: bool = Field(default=False)
     bus: DBusEnum = Field(default=DBusEnum.SessionBus)
+
+    def __hash__(self) -> NonNegativeInt:
+        return hash(
+            (
+                "DesktopAppFrontendConfig",
+                self.app_name,
+                self.use_pasuspend,
+            )
+        )
 
 
 class UnitFrontendConfig(BaseModel):
@@ -65,12 +84,31 @@ class UnitFrontendConfig(BaseModel):
     use_pasuspend: bool = Field(default=False)
     bus: DBusEnum = Field(default=DBusEnum.SessionBus)
 
+    def __hash__(self) -> NonNegativeInt:
+        return hash(
+            (
+                "UnitFrontendConfig",
+                self.unit_name,
+                self.use_pasuspend,
+            )
+        )
+
 
 class ModuleFrontendConfig(BaseModel):
     module_name: str
     class_name: str
     use_pasuspend: bool = Field(default=False)
     bus: DBusEnum = Field(default=DBusEnum.SessionBus)
+
+    def __hash__(self) -> NonNegativeInt:
+        return hash(
+            (
+                "ModuleFrontendConfig",
+                self.module_name,
+                self.class_name,
+                self.use_pasuspend,
+            )
+        )
 
 
 FrontendConfig = (
