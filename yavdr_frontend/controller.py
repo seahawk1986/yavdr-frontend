@@ -19,7 +19,7 @@ from yavdr_frontend.config import (
     UnitFrontendConfig,
 )
 
-from yavdr_frontend.basicfrontend import BasicFrontend
+from yavdr_frontend.basicfrontend import BasicFrontend, FrontendState
 
 from yavdr_frontend.protocols.frontend_protocols import (
     FrontendProtocol,
@@ -45,18 +45,12 @@ from yavdr_frontend.tools import (
     DelayedRepeatableTask,
 )
 from yavdr_frontend.shutdown_handler import ShutdownHandlerProtocol, VDRShutdownHandler
-from yavdr_frontend.vdr_controller import (
-    DBus2VDRStatusHandler,
-    VDRStatusProtocol,
-)
 
 
-class FrontendState(enum.Enum):
-    RESTART = enum.auto()
-    STOP = enum.auto()
-    SWITCH = enum.auto()
-    PREPARE_SHUTDOWN = enum.auto()
-    QUIT = enum.auto()
+class VDRState(enum.Enum):
+    RUNNING = enum.auto()
+    STOPPED = enum.auto()
+    CRASHED = enum.auto()
 
 
 class NeedsControllerProtocol(Protocol):
@@ -90,7 +84,8 @@ class Controller(NeedsControllerProtocol):
         self.log = create_log_handler("Controller", LoggingEnum.DEBUG)
         self.config = config
         # self.current_frontend = None
-        self.state = FrontendState.STOP
+        self.status_lock = asyncio.Lock()
+        self.state: FrontendState = FrontendState.STOP
 
         self.systemd_manager = create_systemd_manager_proxy(
             bus=get_bus(self.config.main.systemd_bus)
@@ -114,17 +109,6 @@ class Controller(NeedsControllerProtocol):
             case _:
                 raise ValueError("unsupported shutdown handler configured")
 
-        self.vdr_status: VDRStatusProtocol = DBus2VDRStatusHandler(
-            on_start=self.on_vdr_start, on_stop=self.on_vdr_stop, config=self.config.vdr
-        )
-
-    async def on_vdr_start(self) -> None:
-        if self.current_frontend and self.current_frontend.name == "vdr":
-            await self.start()
-
-    async def on_vdr_stop(self) -> None:
-        if self.current_frontend and self.current_frontend.name == "vdr":
-            await self.stop()
 
     async def __async_init__(self) -> Self:
         self.log.debug("exporting the Interface to the bus")
@@ -255,7 +239,6 @@ class Controller(NeedsControllerProtocol):
         return await self.frontends[0].frontend_is_running()
 
     async def start(self) -> tuple[bool, str]:
-        self.state = FrontendState.SWITCH
         self.expect_user_activity = False
         self.clear_poweroff_timer()
         current_frontend = self.current_frontend
@@ -271,6 +254,8 @@ class Controller(NeedsControllerProtocol):
             return False, repr(e)
         else:
             return True, "OK"
+        finally:
+            await self.set_frontend_state(FrontendState.SWITCH)
 
     async def stop(self, extern: bool = True) -> tuple[bool, str]:
         """stop the current frontend"""
@@ -285,7 +270,7 @@ class Controller(NeedsControllerProtocol):
                     await self.set_background(BackgroundType.NORMAL)
                 case _:
                     await self.set_background(BackgroundType.DETACHED)
-            self.state = FrontendState.STOP
+            await self.set_frontend_state(FrontendState.STOP)
             self.expect_user_activity = True
 
         if current_frontend := self.current_frontend:
@@ -313,25 +298,36 @@ class Controller(NeedsControllerProtocol):
                 f"stop signal for {caller.name} not from current frontend ({self.current_frontend.name}), ignoring ..."
             )
             return
-        self.log.debug("caller %s has been stopped", caller.name)
+        self.log.debug(
+            f"caller {caller.name=} ({caller.fe_type=}) has been stopped - {self.state=}"
+        )
         self.interface.frontend_changed.emit((caller.name, "stopped"))
         # self.FrontendChanged(caller.name, "stopped") # TODO: remove
-        if self.state == FrontendState.SWITCH:
-            # TODO: check if this is the best way to check if we want to switch
-            await self.switch_on_stopped()
-        elif self.state == FrontendState.RESTART:
-            await self.start()
+        match self.state:
+            case FrontendState.SWITCH:
+                await self.switch_on_stopped()
+            case FrontendState.RESTART:
+                await self.start()
+            case FrontendState.STOP:
+                return
+            case FrontendState.PREPARE_SHUTDOWN | FrontendState.QUIT:
+                await self.stop()
 
     async def switch_on_stopped(self):
         self.frontends.reverse()
         self.log.debug(f"{self.frontends=}")
         await self.start()
 
+    async def set_frontend_state(self, state: FrontendState):
+        async with self.status_lock:
+            self.log.info(f"Setting state from '{self.state}' to '{state}'")
+            self.state = state
+
     async def toggle(self, extern: bool = True) -> tuple[bool, str]:
         self.log.debug("toggle frontend")
         try:
             if await self.is_active():
-                self.state = FrontendState.STOP
+                await self.set_frontend_state(FrontendState.STOP)
                 await self.stop(extern=extern)
             else:
                 await self.start()
@@ -351,7 +347,7 @@ class Controller(NeedsControllerProtocol):
         the next frontend
         """
         self.log.debug("called switch()")
-        self.state = FrontendState.SWITCH
+        await self.set_frontend_state(FrontendState.SWITCH)
         result = (True, "OK")
         try:
             await self.stop(extern=False)
@@ -442,7 +438,7 @@ class Controller(NeedsControllerProtocol):
 
     async def quit(self) -> bool:
         """prepare for shutdown"""
-        self.state = FrontendState.QUIT
+        await self.set_frontend_state(FrontendState.QUIT)
         if (
             current_frontend := self.current_frontend
         ) and await current_frontend.frontend_is_running():
@@ -511,16 +507,19 @@ class Controller(NeedsControllerProtocol):
 
             if stop_on_shutdown:
                 self.log.debug("stop current_frontend: %s", current_frontend.name)
-                self.state = FrontendState.PREPARE_SHUTDOWN
+                await self.set_frontend_state(FrontendState.PREPARE_SHUTDOWN)
                 await self.stop(extern=True)
             self.poweroff_timer = DelayedRepeatableTask(
                 timeout, self.shutdown_handler.attempt_shutdown
             )
         return False  # ensure this method isn't called by a GLib callback again
 
-    async def shutdown_successfull(self) -> bool:
-        """prevent the script from retrying shutdown -
-        call 'frontend-dbus-send shutdown_successfull' before entering standby"""
+    async def on_vdr_shutdown_successfull(self) -> bool:
+        """
+        This method prevents yavdr-frontend from retrying to shut down the system -
+        call 'frontend-dbus-send shutdown_successfull' before entering standby
+        """
+
         self.expect_user_activity = False
         self.clear_poweroff_timer()
         await self.set_background(BackgroundType.NORMAL)
@@ -529,5 +528,5 @@ class Controller(NeedsControllerProtocol):
             # TODO: reset the _state to StateEnum.PREPARE
             self._state = StartupStateEnum.PREPARE
             # vdr_frontend.start = vdr_frontend._startup
-        self.state = FrontendState.RESTART
+        await self.set_frontend_state(FrontendState.RESTART)
         return True

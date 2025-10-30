@@ -1,3 +1,4 @@
+import enum
 from typing import Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -7,6 +8,12 @@ from yavdr_frontend.protocols.frontend_protocols import (
     FrontendProtocol,
 )
 
+class FrontendState(enum.Enum):
+    RESTART = enum.auto()
+    STOP = enum.auto()
+    SWITCH = enum.auto()
+    PREPARE_SHUTDOWN = enum.auto()
+    QUIT = enum.auto()
 
 class BasicFrontend(FrontendProtocol):
     name = "DummyFrontend"
