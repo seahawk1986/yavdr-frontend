@@ -33,9 +33,13 @@ def get_2nd_screen(display: str):
 
 def get_bus(bus: DBusEnum) -> sdbus.SdBus:
     if bus == DBusEnum.SessionBus:
-        return sdbus.sd_bus_open_user()
+        from yavdr_frontend.session_bus import session_bus
+
+        return session_bus
     elif bus == DBusEnum.SystemBus:
-        return sdbus.sd_bus_open_system()
+        from yavdr_frontend.system_bus import system_bus
+
+        return system_bus
     raise ValueError("invalid bus type requested:", bus)
 
 
