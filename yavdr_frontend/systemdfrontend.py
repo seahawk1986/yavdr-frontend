@@ -117,7 +117,8 @@ class SystemdUnit:
             self._is_running = True
 
         elif active_state in ("inactive", "dead", "failed") and sub_state in (
-            "dead, failed"
+            "inactive",
+            "dead, failed",
         ):
             self._is_running = False
         return self._is_running
