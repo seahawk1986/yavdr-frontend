@@ -7,11 +7,12 @@ import time
 from collections.abc import Callable
 from typing import Any, NamedTuple, Protocol, Self, cast, TYPE_CHECKING
 
+import sdbus
+from sdbus_async.dbus_daemon import FreedesktopDbus
 
 
 # from pydbus2vdr import DBus2VDR
 from yavdr_frontend.basicfrontend import FrontendState
-from yavdr_frontend.interfaces.org_freedesktop_dbus import OrgFreedesktopDBusInterface
 from yavdr_frontend.interfaces.vdr_devices import DeTvdrVdrDeviceInterface
 from yavdr_frontend.protocols.frontend_protocols import (
     FrontendProtocol,
@@ -131,16 +132,9 @@ class VDRController(FrontendProtocol):
 
         self.do_startup = True
         self.dbus2vdr = DBus2VDR(self.config.vdr)
-        self.__vdr_status_task = asyncio.create_task(
-            self.on_vdr_ready()
-        )  # track changes of the VDR dbus2vdr interface
-
-        self.vdr_status: VDRStatusProtocol = DBus2VDRStatusHandler(
-            on_start=self.on_vdr_start,
-            on_stop=self.on_vdr_stop,
-            dbus2vdr=self.dbus2vdr,
-            config=self.config.vdr,
-        )
+        # self.__vdr_status_task = asyncio.create_task(
+        #     self.on_vdr_ready()
+        # )  # track changes of the VDR dbus2vdr interface
 
     async def on_vdr_start(self) -> None:
         if (
@@ -150,13 +144,45 @@ class VDRController(FrontendProtocol):
         ):
             await self.start()
 
+    async def on_vdr_ready(self):
+        async for instance_id in self.dbus2vdr.vdr_vdrstatus.ready:
+            if (
+                self.controller.current_frontend
+                and self == self.controller.current_frontend
+                and instance_id == self.config.vdr.id
+            ):
+                self.log.debug(f"vdr ready signal for {instance_id=}")
+                try:
+                    if await self.vdr_is_ready():
+                        await self.load_frontend()
+                        if isinstance(self.controller.frontends[0], VDRController):
+                            await self.start()
+                        else:
+                            await self.disable_remote()
+                    else:
+                        if self.frontend:
+                            await self.frontend.stop()
+                            self.frontend = None
+                except Exception as err:
+                    self.log.warning(f"{err}")
+
     async def on_vdr_stop(self) -> None:
-        ...
-        # if self.current_frontend and self.current_frontend.fe_type == "vdr":
-        #     await self.set_frontend_state(FrontendState.STOP)
-        #     await self.stop(extern=False)
+        async for instance_id in self.dbus2vdr.vdr_vdrstatus.stop:
+            if (
+                self.controller.current_frontend
+                and self == self.controller.current_frontend
+                and instance_id == self.config.vdr.id
+            ):
+                self.log.debug(f"vdr stop signal for {instance_id=}")
 
     async def __async_init__(self) -> Self:
+        self.vdr_status: VDRStatusProtocol = await DBus2VDRStatusHandler(
+            on_start=self.on_vdr_ready,
+            on_stop=self.on_vdr_stop,
+            dbus2vdr=self.dbus2vdr,
+            config=self.config.vdr,
+        )
+
         # self.log.debug("running async init")
         try:
             self.unit_object_path = await self.systemd_manager_proxy.load_unit(
@@ -187,42 +213,29 @@ class VDRController(FrontendProtocol):
             case StartupStateEnum.REGULAR:
                 await self._start()
 
-    def __await__(self) -> Generator[Any, None, Self]:  # noqa: F821
-        return (
-            self.__async_init__().__await__()
-        )  # see https://stackoverflow.com/a/58976768
-
-    async def on_vdr_ready(self):
-        async for instance_id in self.dbus2vdr.vdr_vdrstatus.ready:
-            if (
-                self.controller.current_frontend
-                and self.controller.current_frontend == self
-                and self.config.vdr.id == instance_id
-            ):
-                self.log.debug(f"vdr ready signal for {instance_id=}")
-                await self.start()
-            # p = parse_properties_changed(DeTvdrVdrVdrInterface, s, "ignore")
-            # print(f"vdr status change: {p}")
-            # await self.on_vdr_status_change()
+    # def __await__(self) -> Generator[Any, None, Self]:  # noqa: F821
+    #     return (
+    #         self.__async_init__().__await__()
+    #     )  # see https://stackoverflow.com/a/58976768
 
     # TODO: this method seems not to be used
     # async def on_vdr_ready(self):
     #     await self.load_frontend()
 
-    async def on_vdr_status_change(self, vdr_is_running: bool):
-        try:
-            if await self.vdr_is_ready():
-                await self.load_frontend()
-                if isinstance(self.controller.frontends[0], VDRController):
-                    await self.start()
-                else:
-                    await self.disable_remote()
-            else:
-                if self.frontend:
-                    await self.frontend.stop()
-                    self.frontend = None
-        except Exception as err:
-            self.log.warning(f"{err}")
+    # async def on_vdr_status_change(self, vdr_is_running: bool):
+    #     try:
+    #         if await self.vdr_is_ready():
+    #             await self.load_frontend()
+    #             if isinstance(self.controller.frontends[0], VDRController):
+    #                 await self.start()
+    #             else:
+    #                 await self.disable_remote()
+    #         else:
+    #             if self.frontend:
+    #                 await self.frontend.stop()
+    #                 self.frontend = None
+    #     except Exception as err:
+    #         self.log.warning(f"{err}")
 
     async def enable_remote(self):
         await self.dbus2vdr.vdr_remote.enable()
@@ -294,6 +307,7 @@ class VDRController(FrontendProtocol):
             # else:
             #     self.log.debug(f"could not find config for {plugin}")
         self.log.warning("No matching frontend could be found.")
+        self.frontend = None
 
     async def get_frontend(
         self,
@@ -361,7 +375,7 @@ class VDRController(FrontendProtocol):
         return start_type
 
     async def _start(self):
-        # self.log.debug(f"{self.frontend=}")
+        self.log.debug(f"{self.frontend=}")
         if not self.frontend:
             await self.controller.set_background(BackgroundType.NORMAL)
             return False
@@ -396,8 +410,11 @@ class VDRController(FrontendProtocol):
         # this method is called by yaVDRFrontend regardless if VDR is ready, so
         # we need a mechanism to abort early
         # if not self.dbus2vdr.vdr_isready:
-        if not await self.vdr_is_ready():
-            self.log.warning("startup(): VDR is not ready")
+        try:
+            if not await self.vdr_is_ready():
+                self.log.warning("startup(): VDR is not ready")
+                return
+        except sdbus.dbus_exceptions.DbusServiceUnknownError:
             return
 
         start_t: StartType = await self.start_type()
@@ -473,13 +490,24 @@ class VDRController(FrontendProtocol):
         if self.send_DLIC:
             await self.dbus2vdr.svdrpcommand("skindesigner", "DLIC")
 
+        await self.controller.on_stopped(self)
+
     async def status(self) -> FrontendStatusEnum:
         if self.frontend and await self.frontend.frontend_is_running():
             return FrontendStatusEnum.ACTIVE
         return FrontendStatusEnum.INACTIVE
 
     async def on_stopped(self, caller: FrontendProtocol) -> None:
-        await self.controller.on_stopped(self)
+        # NOTE: this method is intentionally doing nothing
+        # we need to ignore that the frontend exited and
+        # just try to start it the next time the VDR signals to be "ready"
+        ...
+
+        # only switch the frontend if the vdr is still running
+        # - if the vdr crashed, we keep the current frontend
+        # TODO - maybe a status variable is better than a dynamic request
+        # if await self.vdr_status.is_running():
+        #     await self.controller.on_stopped(self)
 
     async def frontend_is_running(self) -> bool:
         if self.frontend:
@@ -490,10 +518,10 @@ class VDRController(FrontendProtocol):
         return await self.dbus2vdr.vdr_vdrstatus.status() == "Ready"
 
     async def started(self) -> None:
-        raise NotImplementedError
+        raise NotImplementedError("Unexpected call of method started")
 
     async def stopped(self) -> None:
-        raise NotImplementedError
+        raise NotImplementedError("Unexpected call of method stopped")
 
     async def status_message(self, status: str) -> None:
         self.log.info(f"{await self.frontend_is_running()=}")
@@ -550,7 +578,7 @@ class DBus2VDRStatusHandler(VDRStatusProtocol):
         on_stop: Callable[[], Awaitable[None]],
         config: VDRConfig,
         dbus2vdr: DBus2VDR,
-        loglevel: LoggingEnum = LoggingEnum.INFO,
+        loglevel: LoggingEnum = LoggingEnum.DEBUG,
     ):
         self.on_start = on_start
         self.on_stop = on_stop
@@ -569,39 +597,57 @@ class DBus2VDRStatusHandler(VDRStatusProtocol):
             bus=self.bus,
         )
 
-        self.dbus_signals = OrgFreedesktopDBusInterface.new_proxy(
-            "org.freedesktop.DBus", "/org/Freedesktop/DBus", self.bus
-        )
+        self.dbus_signals = FreedesktopDbus(self.bus)
 
     async def __async_init__(self) -> Self:
         self.dbus_watcher = asyncio.create_task(self.track_name_owner_changed())
+        self.dbus2vdr_watch_ready = asyncio.create_task(
+            self.track_dbus2vdr_ready_signal()
+        )
+        # await self.dbus_signals.
         self.dbus2vdr_watcher = asyncio.create_task(self.track_dbus2vdr_stop_signal())
         return self
 
     async def is_running(self) -> bool:
-        self.log.debug(f"{await self.vdr_status.status()=}")
-        return (await self.vdr_status.status()) == "Ready"  # TODO: hook this up
+        try:
+            current_state = await self.vdr_status.status()
+            self.log.debug(f"self.vdr_status.status()={current_state}")
+            return (await self.vdr_status.status()) == "Ready"  # TODO: hook this up
+        except sdbus.dbus_exceptions.DbusServiceUnknownError:
+            return False
+
+    async def track_dbus2vdr_ready_signal(self):
+        async for instance_id in self.dbus2vdr.vdr_vdrstatus.ready:
+            # this is the stop signal by dbus2vdr, we only see this on a regular shutdown,
+            # not during a crash
+            print(f"got ready from vdr with {instance_id=}")
+
+            if instance_id == self.config.id:
+                print(f"TODO: react to ready of vdr with {instance_id=}")
+                await self.on_start()
 
     async def track_dbus2vdr_stop_signal(self):
         async for instance_id in self.dbus2vdr.vdr_vdrstatus.stop:
             # this is the stop signal by dbus2vdr, we only see this on a regular shutdown,
             # not during a crash
+            print(f"got stop from vdr with {instance_id=}")
+
             if instance_id == self.config.id:
-                print(instance_id)
+                print(f"TODO: react to stop of vdr with {instance_id=}")
 
     async def track_name_owner_changed(self):
         #  track NameOwnerChanged signals
         async for s in self.dbus_signals.name_owner_changed:
             signal = NameOwnerChangedSignal(*s)
-            print(f"got signal {signal}")
+            # print(f"got NameOwnerChanged signal: {signal}")
             if signal.name == self.vdr_name and len(signal.old_owner) == 0:
                 self.vdr_bus_owner = signal.new_owner
-                print("dbus2vdr appeared on the bus")
+                self.log.info("dbus2vdr appeared on the bus")
                 await self.on_start()
             elif len(signal.new_owner) == 0 and signal.old_owner == self.vdr_bus_owner:
                 self.vdr_bus_owner = ""
-                print(print("dbus2vdr disappeared from the bus"))
-                await self.on_stop()
+                self.log.info("dbus2vdr disappeared from the bus")
+                # await self.on_stop()
 
 
 # TODO: do we need this? The disadvantage of a systemd-based status handling is
