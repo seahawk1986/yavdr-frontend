@@ -36,7 +36,16 @@ class MainConfig(BaseModel):
     systemd_bus: DBusEnum = Field(default=DBusEnum.SessionBus)
     interface_bus: DBusEnum = Field(default=DBusEnum.SystemBus)
     # TODO: how to signal, which busses are available?
+    log_level: LoggingEnum = Field(default=LoggingEnum.DEBUG)
+    log_format: str = Field(
+        default="%(filename)s:%(lineno)s:%(name)s.%(funcName)s(): %(message)s"
+    )
     shutdown_manager: ShutdownEnum = Field(default=ShutdownEnum.VDR)
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def transform(cls, raw: str) -> LoggingEnum:
+        return LoggingEnum[raw.upper()]
 
 
 class BackgroundConfig(BaseModel):
@@ -147,9 +156,9 @@ class LircConfig(BaseModel):
     socket: Path  # NOTE: to avoid cupling, this must not be a SocketPath type
     keymap: dict[str, KeymapConfig]
     min_delay: NonNegativeFloat = Field(default=0.3)
-    loglevel: LoggingEnum = Field(default=LoggingEnum.INFO)
+    log_level: LoggingEnum = Field(default=LoggingEnum.INFO)
 
-    @field_validator("loglevel", mode="before")
+    @field_validator("log_level", mode="before")
     @classmethod
     def transform(cls, raw: str) -> LoggingEnum:
         return LoggingEnum[raw]
@@ -167,14 +176,14 @@ def load_yaml(configfile: Path = Path("config.yml")):
     yaml = YAML()
     for cfgfile in (
         configfile,
-        Path.home() / "/.config/yavdr-frontend/config.yml",
+        Path.home() / ".config/yavdr-frontend/config.yml",
         Path("/etc/yavdr-frontend/config.yml"),
     ):
         try:
-            print(f"try to read {cfgfile.absolute()}")
+            logging.debug(f"try to read {cfgfile.absolute()}")
             config = Config.model_validate(yaml.load(Path(cfgfile)))  # type: ignore
         except FileNotFoundError:
-            # print(f"could not find {Path(cfgfile).absolute()}", file=sys.stderr)
+            logging.debug(f"could not find {Path(cfgfile).absolute()}")
             pass
         except Exception as e:
             logging.exception(e)
