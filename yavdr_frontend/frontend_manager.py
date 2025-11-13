@@ -1,3 +1,4 @@
+from pathlib import Path
 import subprocess
 from yavdr_frontend.basicfrontend import FrontendProtocol
 from yavdr_frontend.config import (
@@ -7,6 +8,10 @@ from yavdr_frontend.config import (
     NamedFrontend,
     UnitFrontendConfig,
 )
+from yavdr_frontend.interfaces.systemd_dbus_interface import (
+    create_systemd_manager_proxy,
+)
+
 from typing import TYPE_CHECKING
 
 
@@ -14,7 +19,7 @@ if TYPE_CHECKING:
     from yavdr_frontend.controller import Controller
     from yavdr_frontend.vdr_controller import VDRController
 from yavdr_frontend.systemdfrontend import SystemdUnitFrontend
-from yavdr_frontend.tools import get_object_from_module
+from yavdr_frontend.tools import get_DesktopAppInfo, get_bus, get_object_from_module
 
 known_frontends: dict[FrontendConfig, FrontendProtocol] = {}
 
@@ -65,33 +70,86 @@ async def system_frontend_factory(
 
     elif isinstance(config, NamedFrontend):  # type: ignore
         # check preconfigured frontends
-        if config.name in controller.config.applications:
-            if cfg := controller.config.applications.get(config.name):
-                # We got a frontend config and have to check it, so let's call this method recursively
-                return await system_frontend_factory(cfg, controller)
-
-        elif (
-            name := f"{config.name}.service"
-            if not config.name.endswith(".service")
-            else config.name
-        ) in await controller.get_systemd_unit_names():
-            return await SystemdUnitFrontend(
-                config=UnitFrontendConfig(
-                    unit_name=name, use_pasuspend=config.use_pasuspend, bus=config.bus
-                ),
-                controller=controller,
-                fe_type="unit",
-            )
+        if cfg := controller.config.applications.get(config.name):
+            # We got a frontend config and have to check it, so let's call this method recursively
+            return await system_frontend_factory(cfg, controller)
         else:
-            return await SystemdUnitFrontend(
-                config=UnitFrontendConfig(
-                    unit_name=systemd_escape_app(app_name=config.name),
-                    use_pasuspend=config.use_pasuspend,
-                    bus=config.bus,
-                ),
-                controller=controller,
-                fe_type="app",
-            )
+            # we only got a name to work with
+            controller.log.debug(f"looking for Frontend with name '{config.name}'")
+
+            # let's check if we got the name of a .desktop file
+            if config.name.endswith(".desktop"):
+                try:
+                    app = get_DesktopAppInfo(config.name)
+                except (TypeError, ValueError) as e:
+                    controller.log.exception(e, exc_info=True)
+                else:
+                    if id := app.get_id():
+                        return await system_frontend_factory(
+                            config=DesktopAppFrontendConfig(
+                                app_name=id,
+                                use_pasuspend=False,
+                                bus=controller.config.main.systemd_bus,
+                            ),
+                            controller=controller,
+                        )
+            # is ist a systemd service?
+            elif config.name.endswith(".service"):
+                return await SystemdUnitFrontend(
+                    config=UnitFrontendConfig(
+                        unit_name=config.name,
+                        use_pasuspend=config.use_pasuspend,
+                        bus=config.bus,
+                    ),
+                    controller=controller,
+                    fe_type="unit",
+                )
+            else:
+                # TODO: we need to guess - is it a systend unit?
+                systemd_manager_proxy = create_systemd_manager_proxy(
+                    bus=get_bus(controller.config.main.systemd_bus)
+                )
+                units = await systemd_manager_proxy.list_unit_files_by_patterns(
+                    [], [(unit_name := f"{config.name}.service")]
+                )
+                for unit_path, _t in units:
+                    p = Path(unit_path)
+                    if p.name == unit_name:
+                        return await SystemdUnitFrontend(
+                            config=UnitFrontendConfig(
+                                unit_name=unit_name,
+                                use_pasuspend=False,
+                                bus=controller.config.main.systemd_bus,
+                            ),
+                            controller=controller,
+                            fe_type="unit",
+                        )
+                #
+
+            raise ValueError(f"unknown frontend name for {config=}")
+
+        # elif (
+        #     name := f"{config.name}.service"
+        #     if not config.name.endswith(".service")
+        #     else config.name
+        # ) in await controller.get_systemd_unit_names():
+        #     return await SystemdUnitFrontend(
+        #         config=UnitFrontendConfig(
+        #             unit_name=name, use_pasuspend=config.use_pasuspend, bus=config.bus
+        #         ),
+        #         controller=controller,
+        #         fe_type="unit",
+        #     )
+        # else:
+        #     return await SystemdUnitFrontend(
+        #         config=UnitFrontendConfig(
+        #             unit_name=systemd_escape_app(app_name=config.name),
+        #             use_pasuspend=config.use_pasuspend,
+        #             bus=config.bus,
+        #         ),
+        #         controller=controller,
+        #         fe_type="app",
+        #     )
 
     if not frontend:
         raise ValueError("Unknown Frontend")

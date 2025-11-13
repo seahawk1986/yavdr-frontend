@@ -1,6 +1,7 @@
 import asyncio
 import importlib
 import logging
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -8,6 +9,11 @@ import time
 from collections.abc import Callable, Mapping, Coroutine
 from typing import Any, cast
 import sdbus
+
+import gi
+
+gi.require_version("Gio", "2.0")
+from gi.repository import Gio
 
 from yavdr_frontend.config import DBusEnum, VDRConfig
 from yavdr_frontend.protocols.frontend_protocols import SystemFrontendProtocol
@@ -202,3 +208,53 @@ class DelayedRepeatableTask:
 
     def is_running(self):
         return self._task and not self._task.done()
+
+_xdg_dirs: list[Path] = []
+if _xdg_data_home := os.getenv("XDG_DATA_HOME"):
+    _xdg_dirs.append(Path(_xdg_data_home) / "applications")
+else:
+    _xdg_dirs.append(Path.home() / ".local/share/applications")
+_xdg_dirs.extend(
+    Path(p) / "applications" for p in os.getenv("XDG_DATA_DIRS", "").split(":") if p
+)
+
+
+def get_DesktopAppInfo(desktop_entry: str) -> Gio.DesktopAppInfo:
+    # get the GIO representation of the desktop file
+    # we have to cover 3 cases:
+    # - we get a full path to a desktop file (has to be in the expected folders)
+    # - we get the id
+    # - we get the filename - here the first match wins
+    # if there is no match, a ValueError is raised
+
+    try:
+        if (p := Path(desktop_entry)).is_absolute() and p.name.endswith(".desktop"):
+            if app := Gio.DesktopAppInfo.new_from_filename(filename=desktop_entry):
+                return app
+            else:
+                logging.warning(f"could not find app info for {desktop_entry}")
+
+        raise TypeError("invalid .desktop file path")
+    except (TypeError, ValueError):
+        try:
+            if app := Gio.DesktopAppInfo.new(desktop_id=desktop_entry):
+                return app
+            else:
+                raise TypeError("invalid desktop_id")
+        except TypeError:
+            print("looking for file in XDG_DIRS")
+            desktop_file = (
+                f"{desktop_entry}.desktop"
+                if not desktop_entry.endswith(".desktop")
+                else desktop_entry
+            )
+            for path in _xdg_dirs:
+                for f in path.rglob(desktop_file):
+                    if f.is_file():
+                        print(f"{f=}")
+                        try:
+                            return Gio.DesktopAppInfo(filename=f"{f}")
+                        except TypeError:
+                            continue
+
+        raise ValueError("no matching .desktop file")

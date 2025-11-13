@@ -3,48 +3,24 @@
 # https://www.leggiero.uk/post/running-desktop-files-from-command-line/
 
 import logging
-import os
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
 
-from gi.repository import Gio  # pyright: ignore[reportMissingModuleSource]
+from yavdr_frontend.tools import get_DesktopAppInfo
 
 
 HOME = Path.home()
+log = logging.getLogger("run_desktop")
 
 
-def run_desktop(desktop_file: str, uris: list[str]):
-    log = logging.getLogger("run_desktop")
-
-    desktop_file = (
-        f"{desktop_file}.desktop"
-        if not desktop_file.endswith(".desktop")
-        else desktop_file
-    )
-
-    xdg_dirs: list[Path] = []
-    if xdg_data_home := os.getenv("XDG_DATA_HOME"):
-        xdg_dirs.append(Path(xdg_data_home) / "applications")
+def run_desktop(desktop_entry: str, uris: list[str]) -> bool:
+    app = get_DesktopAppInfo(desktop_entry=desktop_entry)
+    if app.launch_uris(uris=uris):
+        return True
     else:
-        xdg_dirs.append(HOME / ".local/share/applications")
-    xdg_dirs.extend(
-        Path(p) / "applications" for p in os.getenv("XDG_DATA_DIRS", "").split(":") if p
-    )
+        raise ValueError(f"could not start {app.get_name} with {uris=}")
 
-    for path in xdg_dirs:
-        d_path = path / desktop_file
-        if d_path.is_file():
-            try:
-                if launcher := Gio.DesktopAppInfo.new_from_filename(f"{d_path}"):
-                    launcher.launch_uris(uris, None)
-            except Exception as e:
-                log.exception(e)
-            else:
-                sys.exit()
-        else:
-            log.debug(f"No starter found for {desktop_file} at {d_path}")
-    sys.exit(1)
 
 def main():
     parser = ArgumentParser(description="start .desktop files programmatically")
@@ -58,7 +34,13 @@ def main():
         help="optional paths/URIs passed to the .desktop file",
     )
     args = parser.parse_args()
-    run_desktop(args.desktop_file, args.uris)
+    logging.debug(f"run_desktop({args.desktop_file}, {args.uris}")
+    try:
+        result = run_desktop(args.desktop_file, args.uris)
+        if not result:
+            sys.exit(f"could not start {args.desktop_file}")
+    except ValueError as e:
+        sys.exit(str(e))
 
 
 if __name__ == "__main__":
