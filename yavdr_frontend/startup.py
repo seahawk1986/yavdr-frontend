@@ -5,13 +5,19 @@ from yavdr_frontend.args import StartArgumentParser
 from yavdr_frontend.config import load_yaml
 from yavdr_frontend.controller import Controller
 
-FORMAT = "%(filename)s:%(lineno)s:%(name)s.%(funcName)s(): %(message)s"
+FORMAT = "%(filename)s:%(lineno)s:%(levelname)s:%(name)s.%(funcName)s(): %(message)s"
 
 
 async def parse_args_and_run() -> Controller:
     args = StartArgumentParser.parse_args()
     logging.basicConfig(level=args.loglevel, format=FORMAT)
-    config = load_yaml(args.config)
+    try:
+        config = load_yaml(args.config)
+    except IOError:
+        exit("could not find a valid config file")
+    logging.basicConfig(
+        level=config.main.log_level, format=config.main.log_format, force=True
+    )
     return await Controller(config)  # this variable is needed to keep the object alive
 
 
