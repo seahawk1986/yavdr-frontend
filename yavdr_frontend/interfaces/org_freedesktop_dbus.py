@@ -3,13 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 from sdbus import (
-    DbusDeprecatedFlag,
     DbusInterfaceCommonAsync,
-    DbusNoReplyFlag,
     DbusPropertyConstFlag,
-    DbusPropertyEmitsChangeFlag,
-    DbusPropertyEmitsInvalidationFlag,
-    DbusPropertyExplicitFlag,
     DbusUnprivilegedFlag,
     dbus_method_async,
     dbus_property_async,
