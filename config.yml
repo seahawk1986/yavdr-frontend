@@ -4,6 +4,8 @@ main:
     secondary_frontend: mediacenter  # choose the default value for the application to switch to
     systemd_bus: SessionBus  # the bus used to control systemd units, SystemBus or SessionBus
     interface_bus: SystemBus # the bus to provide yavdr-frontend's dbus interface on, SystemBus or SessionBus
+    log_level: DEBUG
+    log_format: "%(filename)s:%(lineno)s:%(levelname)s:%(name)s.%(funcName)s(): %(message)s"
     # shutdown_ manager: vdr   # let VDR handle the shutdown of the system
 
 backgrounds:
