@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 from sdbus import (
     DbusInterfaceCommonAsync,
     dbus_method_async,
@@ -11,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from yavdr_frontend.config import Config
 from yavdr_frontend.lirc import handle_lirc_connection
+from yavdr_frontend.run_desktop import run_desktop
 
 if TYPE_CHECKING:
     from yavdr_frontend.controller import Controller
@@ -134,8 +136,7 @@ class yaVDRFrontendInterface(
 
     @dbus_method_async(input_signature="s", flags=sdbus.DbusUnprivilegedFlag)
     async def set_display(self, display: str) -> bool:
-        await self.controller.set_display(display=display)
-        return True  # TODO: do we need this or is it better to change the signature?
+        return await self.controller.set_display(display=display)
         #         <method name='setDisplay'>
         #             <arg type='s' name='frontend' direction='in'/>
         #             <arg type='b' name='response' direction='out'/>
@@ -145,8 +146,7 @@ class yaVDRFrontendInterface(
         input_signature="s", result_signature="bs", flags=sdbus.DbusUnprivilegedFlag
     )
     async def start_desktop(self, application: str) -> tuple[bool, str]:
-        # TODO: implement this
-        return await self.controller.switchto(application), "Ok"
+        return (await self.controller.switchto(application)), "Ok"
 
         #         <method name='start_desktop'>
         #             <arg type='s' name='frontend' direction='in'/>
@@ -154,7 +154,15 @@ class yaVDRFrontendInterface(
         #             <arg type='s' name='reason' direction='out'/>
         #         </method>
 
-    # TODO: create a method to start a .desktop file without involving the frontend
+    async def run_desktop_file(self, desktop_file: str) -> tuple[bool, str]:
+        # run a .desktop file given the full path
+        # this can be used to start applications in parallel to the frontend managed ones
+        d_path = Path(desktop_file)
+        if d_path.exists():
+            r = run_desktop(desktop_entry=desktop_file, uris=[])
+            if r:
+                return True, f"{desktop_file} started"
+        return False, f"could not start {desktop_file}"
 
     @dbus_method_async(
         input_signature="sss", result_signature="b", flags=sdbus.DbusUnprivilegedFlag
