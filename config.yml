@@ -23,7 +23,7 @@ backgrounds:
 applications:  # predefined applications
 # Example Syntax:
 #   <APPLICATION>:
-#       name: foo  # if a system unit with this name exists, use it, else use the foo.desktop starter
+#       name: foo  # if a definition of an app with this name exists, use it, otherwise try systemd services and .desktop file starters
 #       OR
 #       unit_name: foo.service  # use the unit foo.service
 #       OR
@@ -49,11 +49,11 @@ applications:  # predefined applications
     browser:
         name: firefox
 
+    firefox:
+        app_name: firefox_firefox.desktop # this is necessary for the snap version
+
     terminal:
         app_name: debian-xterm.desktop
-
-    #youtube:
-    #    unit_name: youtube.service
 
 vdr:
     id: 0  # vdr instance id
