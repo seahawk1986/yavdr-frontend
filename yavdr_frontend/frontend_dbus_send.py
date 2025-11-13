@@ -50,7 +50,10 @@ async def dbus_send():
     args = parser.parse_args()
     cmd = getattr(fe, args.cmd)
     arguments = args.arguments
-    return await cmd(*arguments)
+    try:
+        return await cmd(*arguments)
+    except Exception as e:
+        exit(f"{e}")
 
 
 def main():
