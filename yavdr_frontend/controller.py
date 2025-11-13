@@ -273,6 +273,8 @@ class Controller(NeedsControllerProtocol):
             await self.set_frontend_state(FrontendState.STOP)
             self.expect_user_activity = True
 
+        self.log.debug(f"{self.current_frontend=}")
+
         if current_frontend := self.current_frontend:
             self.log.debug(f"stop: current frontend is {current_frontend.name}")
             is_running: bool = await current_frontend.frontend_is_running()
@@ -358,16 +360,20 @@ class Controller(NeedsControllerProtocol):
             self.log.debug(f"switch(): got result {result}")
             return result
 
-    async def switchto(self, next_frontend: str | None = None):
-        if next_frontend is not None:
-            if next_frontend not in self.preconfigured_frontends:
-                self.preconfigured_frontends[next_frontend] = await self.get_frontend(
+    async def switchto(self, next_frontend: str) -> bool:
+        if next_frontend not in self.preconfigured_frontends:
+            if not (
+                next_frontend_candidate := await self.get_frontend(
                     NamedFrontend(name=next_frontend)
                 )
-            # don't set next frontend if the current and the next_fe are the same
-            if self.frontends[0] is self.preconfigured_frontends.get(next_frontend):
-                return True
-            self.set_next_fe(next_frontend)
+            ):
+                return False
+            self.preconfigured_frontends[next_frontend] = next_frontend_candidate
+
+        # don't set next frontend if the current and the next_fe are the same
+        if self.frontends[0] is self.preconfigured_frontends.get(next_frontend):
+            return True
+        self.set_next_fe(next_frontend)
         await self.switch()
         return True
 
@@ -476,16 +482,11 @@ class Controller(NeedsControllerProtocol):
         else:
             timeout = self.current_frontend.prepare_shutdown_timeout
 
-        # self.poweroff_timer = GLib.timeout_add_seconds(
-        #     timeout, self.prepare_shutdown, instant=instant
-        # )
-
         prepare_shutdown = partial(self.prepare_shutdown, instant=instant)
 
         self.shutdown_task = DelayedRepeatableTask(
             interval=timeout, callback=prepare_shutdown
         )
-        # asyncio.create_task(self.delay(timeout, self.prepare_shutdown(instant=instant)))
         return False  # ensure this method isn't called repeatedly
 
     async def yavdr_compat_poweroff(self):
@@ -525,8 +526,9 @@ class Controller(NeedsControllerProtocol):
         await self.set_background(BackgroundType.NORMAL)
         vdr_frontend = self.preconfigured_frontends.get("vdr")
         if vdr_frontend:
-            # TODO: reset the _state to StateEnum.PREPARE
-            self._state = StartupStateEnum.PREPARE
+            vdr_frontend._startup_state = (
+                StartupStateEnum.PREPARE
+            )  # TODO: what is the purpose of this otherwise unused variable?
             # vdr_frontend.start = vdr_frontend._startup
         await self.set_frontend_state(FrontendState.RESTART)
         return True
