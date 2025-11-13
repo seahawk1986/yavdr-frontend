@@ -104,7 +104,7 @@ vdr:
 lirc:
     socket: /run/lirc/lircd
     # min_delay: 0.3 # require at least 0.3 seconds between key presses
-    loglevel: DEBUG
+    log_level: DEBUG
     keymap:
         KEY_POWER2:
             action: poweroff  # set to "yavdr_compat_poweroff" to mimic the behaviour of older yaVDR version
