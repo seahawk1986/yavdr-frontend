@@ -179,6 +179,9 @@ class Controller(NeedsControllerProtocol):
         self.log.info(f"on_keypress: try to call {key_name=}")
         self.log.debug(f"{self.keymap.get(key_name)=}")
         self.last_key = key_name
+
+        if self.config.lirc.ignore_KEY_COFFE and key_name == "KEY_COFFEE":
+            return
         if keymap_entry := self.keymap.get(key_name):
             self.log.debug(f"execute key action for {key_name}: {keymap_entry=}")
             try:
@@ -526,7 +529,7 @@ class Controller(NeedsControllerProtocol):
         await self.set_background(BackgroundType.NORMAL)
         vdr_frontend = self.preconfigured_frontends.get("vdr")
         if vdr_frontend:
-            vdr_frontend._startup_state = (
+            vdr_frontend.startup_state = (
                 StartupStateEnum.PREPARE
             )  # TODO: what is the purpose of this otherwise unused variable?
             # vdr_frontend.start = vdr_frontend._startup
