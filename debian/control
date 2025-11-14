@@ -8,6 +8,11 @@ Build-Depends:
  dh-sequence-python3,
  python3-setuptools,
  python3-all,
+ pybuild-plugin-pyproject,
+ pyton3-gi,
+ python3-jinja2,
+ python3-ruamel.yaml,
+ python3-sdbus,
 #Testsuite: autopkgtest-pkg-python
 Standards-Version: 4.6.2
 Homepage: <insert the upstream URL, if relevant>
@@ -20,6 +25,7 @@ Multi-Arch: foreign
 Depends:
  ${python3:Depends},
  ${misc:Depends},
+
 Suggests:
  python-yavdr-frontend-doc,
 Description: <insert up to 60 chars description> (Python 3)

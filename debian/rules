@@ -5,6 +5,9 @@
 #export DH_VERBOSE = 1
 
 export PYBUILD_NAME=yavdr-frontend
+export PYBUILD_SYSTEM=pyproject
+export DEB_BUILD_OPTIONS=nocheck
+
 
 %:
 	dh $@ --buildsystem=pybuild
