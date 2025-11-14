@@ -2,16 +2,13 @@ import asyncio
 from collections.abc import Awaitable
 from functools import partial
 import logging
-from pathlib import Path
 import time
 from typing import NoReturn
 from collections.abc import Callable
 from yavdr_frontend.loghandler import create_log_handler
 from yavdr_frontend.config import (
     Config,
-    KeymapConfig,
     LircConfig,
-    LoggingEnum,
     load_yaml,
 )
 
@@ -28,7 +25,7 @@ class LircProtocol(asyncio.Protocol):
         self.keymap = config.keymap
         self.socket = config.socket
         self.on_keypress = on_keypress
-        self.log = create_log_handler("LircProtocol", config.loglevel)
+        self.log = create_log_handler("LircProtocol", config.log_level)
 
     def connection_made(self, transport: asyncio.BaseTransport):
         self.log.debug(f"connected to {self.socket=}")
