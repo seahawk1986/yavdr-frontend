@@ -2,7 +2,7 @@
 
 This script controls the various programs that can be displayed on a yavdr-ansible installation.
 
-## required packages
+## required packages on an Ubuntu system when using uv
 
  * libgirepository-2.0-dev
  * python3-all-dev
