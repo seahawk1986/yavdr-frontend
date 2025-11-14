@@ -139,9 +139,6 @@ class SystemdUnit:
         )
 
 
-# TODO: create extra classes depending on if this is a foo.service or a app@foo.service
-
-
 class SystemdUnitProtocol(Protocol):
     name: str
     unit_name: str
@@ -159,7 +156,7 @@ class SystemdUnitFrontend(
         self,
         config: UnitFrontendConfig,
         controller: "Controller | VDRController",
-        fe_type: str = "",  # TODO: this should be an enum
+        fe_type: str = "",  # NOTE: should this be an enum?
     ):
         self._is_running: bool = False
         self.stop_on_shutdown: bool = False
@@ -181,7 +178,7 @@ class SystemdUnitFrontend(
         self.is_active = False
         self._was_started = False
 
-        # TODO: We might need to add rules to handle systemd-units for the system: https://wiki.archlinux.org/title/Polkit#Allow_management_of_individual_systemd_units_by_regular_users
+        # NOTE: We might need to add rules to handle systemd-units for the system: https://wiki.archlinux.org/title/Polkit#Allow_management_of_individual_systemd_units_by_regular_users
 
     async def __async_init__(self) -> Self:
         # await self.systemd_manager_proxy.subscribe()
@@ -212,12 +209,12 @@ class SystemdUnitFrontend(
         _success = await self.unit.stop()
 
     async def stopped(self):
-        # TODO: we need to switch frontends if the systemd unit exited normally
+        # NOTE: we need to switch frontends if the systemd unit exited normally
         #       And avoid restarting it instead
         self.log.debug(f"stopped {self.name}")
         await self.controller.on_stopped(self)
         self.is_active = (
-            False  # TODO: is this correct or can a unit be restarted in this case?
+            False  # NOTE: is this correct or can a unit be restarted in this case?
         )
 
     async def status_message(self, status: str) -> None:

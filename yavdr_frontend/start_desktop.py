@@ -10,7 +10,7 @@ from yavdr_frontend.interfaces.yavdr_frontend_interface import (
     YAVDR_FRONTEND_BUS_NAME,
 )
 
-# TODO: find better filename
+# NOTE: find better filename
 
 # This scripts forwards the absolute path, desktop_id or name of a .desktop file
 # to the DBus interface of yavdr-frontend.

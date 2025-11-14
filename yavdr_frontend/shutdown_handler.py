@@ -54,7 +54,6 @@ class VDRShutdownHandler(ShutdownHandlerProtocol):
         ):  # TODO: use a better way to determine if the VDR is ready and running
             self.log.info("VDR not running, trying again")
             return True
-        # startup = self.controller.config.vdr.attach_on_startup # TODO: what is this for?
         try:
             code, msg, *_ = await self.vdr_shutdown.confirm_shutdown(ignoreuser=True)
             self.log.info(f"attempt_shutdown: {msg}")
