@@ -428,9 +428,8 @@ class VDRController(FrontendProtocol):
         if start_t == StartType.UNKNOWN:
             return
         else:
-            self._statup_state = StartupStateEnum.REGULAR
+            self.startup_state = StartupStateEnum.REGULAR
             self.log.debug(f"setting {self.startup_state=:s}")
-            # self.start = self._start  # switch to the regular start method
 
         startup = self.controller.config.vdr.attach_on_startup
         self.log.debug(f"attach_on_startup: {startup}")

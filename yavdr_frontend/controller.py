@@ -529,8 +529,8 @@ class Controller(NeedsControllerProtocol):
         await self.set_background(BackgroundType.NORMAL)
         vdr_frontend = self.preconfigured_frontends.get("vdr")
         if vdr_frontend:
-            vdr_frontend.startup_state = (
-                StartupStateEnum.PREPARE
+            await (
+                vdr_frontend.reset()
             )  # TODO: what is the purpose of this otherwise unused variable?
             # vdr_frontend.start = vdr_frontend._startup
         await self.set_frontend_state(FrontendState.RESTART)
