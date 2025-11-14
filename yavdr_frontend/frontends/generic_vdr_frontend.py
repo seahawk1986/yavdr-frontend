@@ -66,11 +66,14 @@ class GenericVDRFrontend(VDRFrontendProtocol):
     async def status_message(self, status: str) -> None:
         self.log.info(f"{await self.frontend_is_running()=}")
 
+class SofthddeviceStatusEnum(IntEnum):
+    ATTACHED = 910
+    SUSPEND_NORMAL = 911
+    SUSPEND_DETACHED = 912
 
 class SofthdBaseClass(GenericVDRFrontend):
     name = "changeme"
     fe_type = "VDR Module"
-    states = {910: "attached", 911: "suspended", 912: "detached"}
 
     def __init__(self, controller: VDRController):
         self.log = logging.getLogger(self.name)
@@ -95,18 +98,8 @@ class SofthdBaseClass(GenericVDRFrontend):
     async def svdrpcmd(
         self, action: str, options: str = ""
     ) -> tuple[int, str] | tuple[None, None]:
-        """
-        Relevant description from SVDRP HELP:
-        DETA
-            Detach plugin.
-
-            The plugin will be detached from the audio, video and DVB
-            devices.  Other programs or plugins can use them now.
-
-        RAISE
-            raise window to the front
-        """
-        if await self.vdrcontroller.controller.vdr_status.is_running():
+        """Send a svdrpcommand to the vdr if it is running"""
+        if await self.vdrcontroller.vdr_status.is_running():
             try:
                 return await self._svdrpcmd(cmd=action, option=options)
             except Exception as e:
@@ -123,6 +116,9 @@ class SofthdBaseClass(GenericVDRFrontend):
             -d display      display of x11 server (fe. :0.0)
             -a audio        audio device (fe. alsa: hw:0,0 oss: /dev/dsp)
             -p pass         audio device for pass-through (hw:0,1 or /dev/dsp1)
+
+        RAISE
+            raise window to the front
         """
 
         async def env2template(cmd_options: dict[str, str]):
@@ -146,10 +142,19 @@ class SofthdBaseClass(GenericVDRFrontend):
             expected_state="attached",
             logmsg="attached",
         )
+        # TODO: should we raise the window?
         return result
 
     def deta(self):
-        """detach softhddevice style frontend"""
+        """detach softhddevice style frontend
+
+        DETA
+            Detach plugin.
+
+            The plugin will be detached from the audio, video and DVB
+            devices.  Other programs or plugins can use them now.
+
+        """
         return self.change_state(
             action="deta", options="", expected_state="detached", logmsg="detached"
         )
@@ -203,7 +208,7 @@ class SofthdBaseClass(GenericVDRFrontend):
             if await self.frontend_is_running():
                 r = await self.deta()
                 if self.use_pasuspend:
-                    paresume()
+                    await paresume()
                 await self.vdrcontroller.on_stopped(self)
                 return r
         except TypeError:
@@ -217,7 +222,7 @@ class SofthdBaseClass(GenericVDRFrontend):
         if softhdcuvid is suspended, attach it
         returns True if the frontend was attached, otherwise False
         """
-        if await self.check_state() == "suspended":
+        if await self.check_state() == SofthddeviceStatusEnum.SUSPEND_NORMAL:
             result = await self.change_state(
                 "resu", expected_state="attached", logmsg="resumed"
             )
@@ -227,19 +232,20 @@ class SofthdBaseClass(GenericVDRFrontend):
             # self.log.debug("frontend does not need to resume")
             return False
 
-    class SofthddeviceStatusEnum(IntEnum):
-        NOT_SUSPENDED = 910
-        SUSPEND_NORMAL = 911
-        SUSPEND_DETACHED = 912
+
 
     async def check_state(self):
         code, _msg = await self._svdrpcmd(cmd="stat")
         self.log.debug(f"check_state(): got status code: {code}")
-        if code in self.states:
-            return self.states[code]
+        # if code in self.states:
+        #     return self.states[code]
+        try:
+            return SofthddeviceStatusEnum(code)
+        except Exception as e:
+            self.log.exception(f"unknown status {code=}: {e}")
 
     async def status(self) -> FrontendStatusEnum:
-        if await self.check_state() == "attached":
+        if await self.check_state() == SofthddeviceStatusEnum.ATTACHED:
             self.log.debug(f"status: {self.name} is attached")
             return FrontendStatusEnum.ACTIVE
         else:

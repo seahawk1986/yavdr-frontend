@@ -8,15 +8,14 @@ import subprocess
 import time
 from collections.abc import Callable, Mapping, Coroutine
 from typing import Any, cast
+
 import sdbus
-
 import gi
-
 gi.require_version("Gio", "2.0")
-from gi.repository import Gio
+from gi.repository import Gio  # pyright: ignore[reportMissingModuleSource] # noqa: E402
 
-from yavdr_frontend.config import DBusEnum, VDRConfig
-from yavdr_frontend.protocols.frontend_protocols import SystemFrontendProtocol
+from yavdr_frontend.config import DBusEnum, VDRConfig  # noqa: E402
+from yavdr_frontend.protocols.frontend_protocols import SystemFrontendProtocol  # noqa: E402
 
 
 DISPLAY_RE = re.compile(r"(?P<host>\w+)?(?P<display>:\d)(?P<screen>\.\d)?")
@@ -86,7 +85,7 @@ def pasuspend():
         return True
 
 
-def paresume():
+async def paresume():
     """call yavdr-pasuspend to resume pulseaudio output"""
     # try to wait until vdr has released all sound devices
     # if wait-for-vdr-snd-release can't be executed successfully
@@ -99,7 +98,7 @@ def paresume():
     except Exception as e:
         logging.exception(e)
         logging.debug("waiting for %d seconds", timeout)
-        time.sleep(timeout)
+        await asyncio.sleep(timeout)
 
     try:
         subprocess.run(["yavdr-pasuspend", "-r"], check=True)
@@ -109,7 +108,7 @@ def paresume():
         return False
     else:
         logging.debug("successfully called yavdr-pasuspend -r")
-        time.sleep(0.1)
+        await asyncio.sleep(0.1)
         return True
 
 
