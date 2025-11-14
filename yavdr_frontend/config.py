@@ -157,6 +157,7 @@ class LircConfig(BaseModel):
     keymap: dict[str, KeymapConfig]
     min_delay: NonNegativeFloat = Field(default=0.3)
     log_level: LoggingEnum = Field(default=LoggingEnum.INFO)
+    ignore_KEY_COFFE: bool = Field(default=False)
 
     @field_validator("log_level", mode="before")
     @classmethod
