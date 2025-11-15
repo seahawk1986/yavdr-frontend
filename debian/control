@@ -1,5 +1,5 @@
 Source: yavdr-frontend
-Section: unknown
+Section: utils
 Priority: optional
 Maintainer: yaVDR Demo <demo@unknown>
 Rules-Requires-Root: no
@@ -27,8 +27,10 @@ Depends:
  ${misc:Depends},
 Suggests:
  python-yavdr-frontend-doc,
-Description: <insert up to 60 chars description> (Python 3)
- <Insert long description, indented with spaces.>
+Description: frontend script for yaVDR (Python 3)
+ This package contains the script and tools to manage a VDR frontend
+ and other applications and can be controlled either via it's DBus Interface
+ or a remote control on a lirc-compatible socket.
  .
  This package installs the library for Python 3.
 
@@ -39,7 +41,7 @@ Multi-Arch: foreign
 Depends:
  ${sphinxdoc:Depends},
  ${misc:Depends},
-Description: <insert up to 60 chars description> (common documentation)
- <Insert long description, indented with spaces.>
+Description: Documentation for python-yavdr-frontend (common documentation)
+ This package contains the documentation for the yavdr-frontend script
  .
  This is the common documentation package.
