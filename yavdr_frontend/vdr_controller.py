@@ -286,9 +286,10 @@ class VDRController(FrontendProtocol):
         """
         Returns an enum StartType.
         We need to cover three cases:
-            - Manual start (no timer or acpiwakeup): StartType.ManualStart
+            - Manual start (no timer or acpiwakeup): StartType.MANUAL
             - Start for a timer or vdr plugin:       StartType.VDR_WAKEUP
             - Start for vdr-addon-acpiwakeup:        StartType.OTHER_WAKEUP
+            - could not determine the start type:    StartType.UNKNOWN
         """
 
         def wakeup_timestamp_in_range(
