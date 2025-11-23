@@ -1,3 +1,10 @@
+yavdr-frontend (0.1.1-0yavdr0~resolute) resolute; urgency=medium
+
+  * add config files and systemd units
+  * add missing files to debiandir 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 23 Nov 2025 12:30:07 +0100
+
 yavdr-frontend (0.1.0-0yavdr0~resolute) resolute; urgency=medium
 
   * Initial release after rewrite 

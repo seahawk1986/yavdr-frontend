@@ -1,0 +1,11 @@
+[Unit]
+Description=start an application
+Conflicts=kodi.service
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/run-desktop '%I'
+SuccessExitStatus=0 15
+
+[Install]
+WantedBy=default.target

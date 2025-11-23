@@ -1,0 +1,9 @@
+[Unit]
+Description=start vdr-sxfe as vdr frontend
+
+[Service]
+Environment=OPTIONS="-E localhost"
+EnvironmentFile=-%h/.config/yavdr-frontend/xineliboutput.conf
+Type=simple
+ExecStart=/usr/bin/vdr-sxfe $OPTIONS
+Restart=on-failure

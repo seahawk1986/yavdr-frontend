@@ -1,0 +1,11 @@
+[Unit]
+Description=manage VDR frontends
+After=dbus.service
+Wants=dbus.service
+
+[Service]
+ExecStart=/usr/bin/yavdr-frontend
+KillSignal=SIGINT
+
+[Install]
+WantedBy=yavdr-desktop.target

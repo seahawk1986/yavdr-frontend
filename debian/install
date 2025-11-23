@@ -1,0 +1,3 @@
+config/etc/* etc
+config/usr/* usr
+config.yml   etc/yavdr-frontend/

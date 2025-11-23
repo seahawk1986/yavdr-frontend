@@ -1,0 +1,13 @@
+[Unit]
+Description=Start kodi in our user session
+
+[Service]
+Type=simple
+Environment=args="-l /run/lirc/lircd"
+EnvironmentFile=-%h/.config/yavdr-frontend/kodi.conf
+ExecStartPre=-/usr/bin/set-kodi-display
+ExecStart=/usr/bin/kodi $args
+ExecStop=/bin/bash -c "/usr/bin/kodi-send --action=QUIT; while /usr/bin/pgrep kodi; do sleep 1;  done; sleep 1"
+TimeoutStopSec=10
+SuccessExitStatus=0 127
+Restart=on-failure
