@@ -1,5 +1,6 @@
 yavdr-frontend (0.1.1-0yavdr0~resolute) resolute; urgency=medium
 
+  * switch to src layout 
   * add config files and systemd units
   * add missing files to debiandir 
 
