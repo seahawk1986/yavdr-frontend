@@ -2,7 +2,7 @@
 Description=start vdr-sxfe as vdr frontend
 
 [Service]
-Environment=OPTIONS="-E localhost"
+Environment=OPTIONS="-E xvdr://127.0.0.1:37890"
 EnvironmentFile=-%h/.config/yavdr-frontend/xineliboutput.conf
 Type=simple
 ExecStart=/usr/bin/vdr-sxfe $OPTIONS
