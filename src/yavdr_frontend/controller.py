@@ -4,6 +4,7 @@ from collections import deque
 from collections.abc import Coroutine
 import enum
 from functools import partial
+import logging
 import os
 from typing import Any, Protocol, Self
 
@@ -535,3 +536,20 @@ class Controller(NeedsControllerProtocol):
             # vdr_frontend.start = vdr_frontend._startup
         await self.set_frontend_state(FrontendState.RESTART)
         return True
+
+    async def drm_hotplug(self) -> None:
+        """This method tries to update the display configuration
+        We look for connected outputs for the primary and secondary connector
+        if they are found we trigger xrandr to configure them. This can start an additional x-server
+        on the respective screen
+        """
+        from yavdr_frontend.drm_hotlug import load_facts, drm_hotplug, DRMModel
+
+        data = load_facts()
+        try:
+            logging.info(f"{data=}")
+            drm_model = DRMModel(**data).drm
+        except Exception as e:
+            logging.exception(f"Invalid data: {e}")
+        else:
+            drm_hotplug(drm_model)

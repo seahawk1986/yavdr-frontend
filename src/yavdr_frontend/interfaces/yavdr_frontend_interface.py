@@ -200,6 +200,10 @@ class yaVDRFrontendInterface(
         #     </interface>
         # </node>
 
+    @dbus_method_async(flags=sdbus.DbusUnprivilegedFlag)
+    async def drm_hotplug(self) -> None:
+        return await self.controller.drm_hotplug()
+
     @dbus_property_async(property_signature="s")
     def current_frontend(self) -> str:
         return (
