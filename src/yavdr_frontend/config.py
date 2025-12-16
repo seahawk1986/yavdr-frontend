@@ -151,6 +151,13 @@ class KeymapConfig(BaseModel):
     action: str  # TODO: make this an enum for the methods in yavdr_frontend
     args: list[str] = Field(default_factory=list)
 
+class Connector(BaseModel):
+
+
+class DRMConfig(BaseModel):
+    primary: Connector | None = None
+    secondary: Connector | None = None
+
 
 class LircConfig(BaseModel):
     socket: Path  # NOTE: to avoid cupling, this must not be a SocketPath type
@@ -171,9 +178,10 @@ class Config(BaseModel):
     applications: dict[str, FrontendConfig]
     vdr: VDRConfig
     lirc: LircConfig
+    drm: DRMConfig
 
 
-def load_yaml(configfile: Path = Path("config.yml")):
+def load_yaml(configfile: Path = Path("config.yml"))-> Config:
     yaml = YAML()
     for cfgfile in (
         configfile,
@@ -182,7 +190,7 @@ def load_yaml(configfile: Path = Path("config.yml")):
     ):
         try:
             logging.debug(f"try to read {cfgfile.absolute()}")
-            config = Config.model_validate(yaml.load(Path(cfgfile)))  # type: ignore
+            config: Config = Config.model_validate(yaml.load(Path(cfgfile)))  # type: ignore
         except FileNotFoundError:
             logging.debug(f"could not find {Path(cfgfile).absolute()}")
             pass

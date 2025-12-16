@@ -4,7 +4,6 @@ from collections import deque
 from collections.abc import Coroutine
 import enum
 from functools import partial
-import logging
 import os
 from typing import Any, Protocol, Self
 
@@ -46,6 +45,12 @@ from yavdr_frontend.tools import (
     DelayedRepeatableTask,
 )
 from yavdr_frontend.shutdown_handler import ShutdownHandlerProtocol, VDRShutdownHandler
+from yavdr_frontend.drm_hotlug import (
+    check_configured_display,
+    load_facts,
+    drm_hotplug,
+    DRMModel,
+)
 
 
 class VDRState(enum.Enum):
@@ -243,6 +248,9 @@ class Controller(NeedsControllerProtocol):
         return await self.frontends[0].frontend_is_running()
 
     async def start(self) -> tuple[bool, str]:
+        if not check_configured_display(os.environ.get("DISPLAY", ":0")):
+            self.log.info("no configured display found, don't start yet")
+            return False, ("no configured display found")
         self.expect_user_activity = False
         self.clear_poweroff_timer()
         current_frontend = self.current_frontend
@@ -543,13 +551,15 @@ class Controller(NeedsControllerProtocol):
         if they are found we trigger xrandr to configure them. This can start an additional x-server
         on the respective screen
         """
-        from yavdr_frontend.drm_hotlug import load_facts, drm_hotplug, DRMModel
 
         data = load_facts()
         try:
-            logging.info(f"{data=}")
+            self.log.info(f"{data=}")
             drm_model = DRMModel(**data).drm
         except Exception as e:
-            logging.exception(f"Invalid data: {e}")
+            self.log.exception(f"Invalid data: {e}")
         else:
-            drm_hotplug(drm_model)
+            await drm_hotplug(drm_model)
+            await asyncio.sleep(0.5)
+            await self.set_background(BackgroundType.NORMAL)
+            await self.start()

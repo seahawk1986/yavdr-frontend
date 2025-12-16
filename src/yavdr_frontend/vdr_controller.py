@@ -167,7 +167,7 @@ class VDRController(FrontendProtocol):
                     await self.load_frontend()
                     if isinstance(self.controller.current_frontend, VDRController):
                         self.log.debug(f"start {self.frontend=}s")
-                        await self.start()
+                        await self.controller.start()
                     else:
                         await self.disable_remote()
                 else:
