@@ -152,6 +152,9 @@ class KeymapConfig(BaseModel):
     args: list[str] = Field(default_factory=list)
 
 class Connector(BaseModel):
+    drm_connector: str
+    xrandr_connector: str
+    edid_name: str
 
 
 class DRMConfig(BaseModel):

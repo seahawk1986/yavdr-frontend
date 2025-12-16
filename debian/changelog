@@ -1,3 +1,9 @@
+yavdr-frontend (0.1.5-0yavdr0~resolute) resolute; urgency=medium
+
+  * fix class definition 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Tue, 16 Dec 2025 13:08:35 +0100
+
 yavdr-frontend (0.1.4-0yavdr0~resolute) resolute; urgency=medium
 
   * delay start of frontend if display not configured 
