@@ -21,7 +21,7 @@ backgrounds:
     shutdown:
         path: "/usr/share/yavdr/images/yaVDR_background_shutdown.png"
         fill: True
-  
+
 applications:  # predefined applications
 # Example Syntax:
 #   <APPLICATION>:
@@ -125,3 +125,7 @@ lirc:
 #            args:
 #                - vdr
 #                - youtube
+
+drm:
+    primary: null
+    secondary: null
