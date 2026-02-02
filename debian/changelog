@@ -1,3 +1,10 @@
+yavdr-frontend (0.1.7-0yavdr0~resolute) resolute; urgency=medium
+
+  * add yavdr-frontendctl 
+  * add on_xorg_start method
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Mon, 02 Feb 2026 11:32:25 +0100
+
 yavdr-frontend (0.1.5-0yavdr0~resolute) resolute; urgency=medium
 
   * fix class definition 
