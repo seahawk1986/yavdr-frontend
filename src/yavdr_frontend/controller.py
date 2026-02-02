@@ -115,7 +115,6 @@ class Controller(NeedsControllerProtocol):
             case _:
                 raise ValueError("unsupported shutdown handler configured")
 
-
     async def __async_init__(self) -> Self:
         self.log.debug("exporting the Interface to the bus")
         self.interface: yaVDRFrontendInterface = yaVDRFrontendInterface(self)
@@ -270,7 +269,9 @@ class Controller(NeedsControllerProtocol):
             await self.set_frontend_state(FrontendState.SWITCH)
 
     async def stop(self, extern: bool = True) -> tuple[bool, str]:
-        """stop the current frontend"""
+        """stop the current frontend. if extern is true, the frontend can be
+        started again by user activity. For internal calls that don't need to alter the state,
+        use extern=False"""
         self.log.debug(f"called stop(extern={extern})")
         if extern:
             match self.state:
@@ -538,12 +539,29 @@ class Controller(NeedsControllerProtocol):
         await self.set_background(BackgroundType.NORMAL)
         vdr_frontend = self.preconfigured_frontends.get("vdr")
         if vdr_frontend:
-            await (
-                vdr_frontend.reset()
-            )  # TODO: what is the purpose of this otherwise unused variable?
-            # vdr_frontend.start = vdr_frontend._startup
+            await vdr_frontend.reset()
+
         await self.set_frontend_state(FrontendState.RESTART)
         return True
+
+    async def on_xorg_start(self) -> None:
+        self.expect_user_activity = True
+        if (
+            self.current_frontend
+            and self.current_frontend.startup_state == StartupStateEnum.PREPARE
+        ):
+            await self.set_background(BackgroundType.DETACHED)
+        else:
+            await self.set_background(BackgroundType.NORMAL)
+            await self.start()
+
+        return None
+
+    async def on_xorg_stop(self) -> None:
+        self.expect_user_activity = False
+        await self.stop()
+
+        return None
 
     async def drm_hotplug(self) -> None:
         """This method tries to update the display configuration

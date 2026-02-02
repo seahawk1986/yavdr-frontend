@@ -204,6 +204,18 @@ class yaVDRFrontendInterface(
     async def drm_hotplug(self) -> None:
         return await self.controller.drm_hotplug()
 
+    @dbus_method_async(flags=sdbus.DbusUnprivilegedFlag)
+    async def on_xorg_start(self) -> None:
+        # this method is called after xorg started
+        # due to how yavdr-xorg.service works, the systemd user session
+        # can outlive the systemd unit, especially if it is restarted.
+        # So we need to set the background image and start the frontend (if it has left the prepare state)
+        return await self.controller.on_xorg_start()
+
+    @dbus_method_async(flags=sdbus.DbusUnprivilegedFlag)
+    async def on_xorg_stop(self) -> None:
+        return await self.controller.on_xorg_stop()
+
     @dbus_property_async(property_signature="s")
     def current_frontend(self) -> str:
         return (

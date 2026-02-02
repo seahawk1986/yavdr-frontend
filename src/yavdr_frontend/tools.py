@@ -11,6 +11,7 @@ from typing import Any, cast
 
 import sdbus
 import gi
+
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio  # pyright: ignore[reportMissingModuleSource] # noqa: E402
 
@@ -208,6 +209,7 @@ class DelayedRepeatableTask:
     def is_running(self):
         return self._task and not self._task.done()
 
+
 _xdg_dirs: list[Path] = []
 if _xdg_data_home := os.getenv("XDG_DATA_HOME"):
     _xdg_dirs.append(Path(_xdg_data_home) / "applications")
@@ -216,6 +218,21 @@ else:
 _xdg_dirs.extend(
     Path(p) / "applications" for p in os.getenv("XDG_DATA_DIRS", "").split(":") if p
 )
+
+
+async def run(cmd: str, args: list[str]) -> tuple[int | None, bytes, bytes]:
+    proc = await asyncio.create_subprocess_exec(
+        cmd, *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+
+    stdout, stderr = await proc.communicate()
+
+    logging.debug(f"[{cmd!r} exited with {proc.returncode}]")
+    if stdout:
+        logging.debug(f"[stdout]\n{stdout.decode()}")
+    if stderr:
+        logging.debug(f"[stderr]\n{stderr.decode()}")
+    return proc.returncode, stdout, stderr
 
 
 def get_DesktopAppInfo(desktop_entry: str) -> Gio.DesktopAppInfo:
