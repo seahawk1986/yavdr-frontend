@@ -17,12 +17,11 @@ frontend-dbus-send = "yavdr_frontend:frontend_dbus_send.main"
 start-desktop = "yavdr_frontend:start_desktop.main"
 run-desktop = "yavdr_frontend:run_desktop.main"
 yavdr-frontend = "yavdr_frontend:startup.main"
+yavdr-frontendctl = "yavdr_frontend:frontendctl.main"
 
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
-dev = [
-    "pygobject-stubs>=2.13.0",
-]
+dev = ["pygobject-stubs>=2.13.0"]
