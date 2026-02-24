@@ -216,6 +216,10 @@ class yaVDRFrontendInterface(
     async def on_xorg_stop(self) -> None:
         return await self.controller.on_xorg_stop()
 
+    @dbus_method_async(flags=sdbus.DbusUnprivilegedFlag)
+    async def switch_displays(self) -> None:
+        return await self.controller.switch_displays()
+
     @dbus_property_async(property_signature="s")
     def current_frontend(self) -> str:
         return (

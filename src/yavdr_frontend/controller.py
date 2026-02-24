@@ -581,3 +581,27 @@ class Controller(NeedsControllerProtocol):
             await asyncio.sleep(0.5)
             await self.set_background(BackgroundType.NORMAL)
             await self.start()
+
+    async def switch_displays(self) -> None:
+        self.log.info("switch displays")
+        env_vars = await self.systemd_manager.environment
+        current_display = None
+        for v in env_vars:
+            if v.startswith("DISPLAY="):
+                _, _, current_display = v.partition("=")
+                break
+        if current_display:
+            next_display = f"{current_display[: current_display.find('.')]}.{'1' if current_display[-1] == '0' else '0'}"
+
+            has_osd2web = await self.systemd_manager.list_units_by_names(
+                ["osd2web.service"]
+            )
+
+            await self.stop()
+
+            if has_osd2web:
+                await self.systemd_manager.stop_unit("osd2web.service", "fail")
+            await self.set_display(next_display)
+            if has_osd2web:
+                await self.systemd_manager.start_unit("osd2web.service", "fail")
+            await self.start()
