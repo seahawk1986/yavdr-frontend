@@ -1,8 +1,10 @@
 import enum
 import logging
 from pathlib import Path
+from typing import Annotated, Any
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     FilePath,
     Field,
     NonNegativeFloat,
@@ -11,6 +13,7 @@ from pydantic import (
 )
 
 from ruamel.yaml import YAML
+
 
 class LoggingEnum(enum.IntEnum):
     WARNING = logging.WARNING
@@ -22,13 +25,14 @@ class LoggingEnum(enum.IntEnum):
     NOTSET = logging.NOTSET
 
 
-
 class DBusEnum(enum.StrEnum):
     SessionBus = "SessionBus"
     SystemBus = "SystemBus"
 
+
 class ShutdownEnum(enum.StrEnum):
     VDR = "vdr"
+
 
 class MainConfig(BaseModel):
     primary_frontend: str = Field(default="dummy")
@@ -52,11 +56,13 @@ class BackgroundConfig(BaseModel):
     path: FilePath
     fill: bool
 
+
 class BackgroundType(enum.StrEnum):
     DETACHED = "detached"
     NORMAL = "normal"
     PREPARE_SHUTDOWN = "prepare_shutdown"
     SHUTDOWN = "shutdown"
+
 
 class NamedFrontend(BaseModel):
     name: str
@@ -151,15 +157,34 @@ class KeymapConfig(BaseModel):
     action: str  # TODO: make this an enum for the methods in yavdr_frontend
     args: list[str] = Field(default_factory=list)
 
+
 class Connector(BaseModel):
     drm_connector: str
     xrandr_connector: str
     edid_name: str
 
 
+def check_drm_completeness(value: Any | dict[str, str]) -> Any:
+    if isinstance(value, dict):
+        if all(
+            (
+                bool(value.get("drm_connector")),
+                bool(value.get("xrandr_connector")),
+                bool(value.get("edid_name")),
+            )
+        ):
+            return value
+    logging.warning(
+        f"incomplete data for DRM connector: {value}, treating it as unconfigured"
+    )
+    return None
+
+
 class DRMConfig(BaseModel):
-    primary: Connector | None = None
-    secondary: Connector | None = None
+    primary: Annotated[Connector | None, BeforeValidator(check_drm_completeness)] = None
+    secondary: (
+        Annotated[Connector | None, BeforeValidator(check_drm_completeness)] | None
+    ) = None
 
 
 class LircConfig(BaseModel):
@@ -184,7 +209,7 @@ class Config(BaseModel):
     drm: DRMConfig
 
 
-def load_yaml(configfile: Path = Path("config.yml"))-> Config:
+def load_yaml(configfile: Path = Path("config.yml")) -> Config:
     yaml = YAML()
     for cfgfile in (
         configfile,
