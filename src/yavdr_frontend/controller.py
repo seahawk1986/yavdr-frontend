@@ -597,11 +597,11 @@ class Controller(NeedsControllerProtocol):
                 ["osd2web.service"]
             )
 
-            await self.stop()
+            await self.stop(False)
 
             if has_osd2web:
-                await self.systemd_manager.stop_unit("osd2web.service", "fail")
+                await self.systemd_manager.stop_unit("osd2web.service", "replace")
             await self.set_display(next_display)
             if has_osd2web:
-                await self.systemd_manager.start_unit("osd2web.service", "fail")
+                await self.systemd_manager.start_unit("osd2web.service", "replace")
             await self.start()
