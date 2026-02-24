@@ -212,7 +212,7 @@ class Config(BaseModel):
 def load_yaml(configfile: Path = Path("config.yml")) -> Config:
     yaml = YAML()
     for cfgfile in (
-        configfile,
+        # configfile,
         Path.home() / ".config/yavdr-frontend/config.yml",
         Path("/etc/yavdr-frontend/config.yml"),
     ):
