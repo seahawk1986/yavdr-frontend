@@ -1,3 +1,9 @@
+yavdr-frontend (0.1.8-0yavdr0~resolute) resolute; urgency=medium
+
+  * adapt hotplug logic 
+
+ -- Alexander Grothe <seahawk1986@gmx.de>  Sun, 15 Mar 2026 12:05:48 +0100
+
 yavdr-frontend (0.1.7-0yavdr0~resolute) resolute; urgency=medium
 
   * add yavdr-frontendctl 

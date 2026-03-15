@@ -49,7 +49,6 @@ from yavdr_frontend.drm_hotlug import (
     check_configured_display,
     load_facts,
     drm_hotplug,
-    DRMModel,
 )
 
 
@@ -570,17 +569,11 @@ class Controller(NeedsControllerProtocol):
         on the respective screen
         """
 
-        data = load_facts()
-        try:
-            self.log.info(f"{data=}")
-            drm_model = DRMModel(**data).drm
-        except Exception as e:
-            self.log.exception(f"Invalid data: {e}")
-        else:
-            await drm_hotplug(drm_model)
-            await asyncio.sleep(0.5)
-            await self.set_background(BackgroundType.NORMAL)
-            await self.start()
+        primary_display, secondary_display = load_facts()
+        await drm_hotplug(primary_display, secondary_display)
+        await asyncio.sleep(0.5)
+        await self.set_background(BackgroundType.NORMAL)
+        await self.start()
 
     async def switch_displays(self) -> None:
         self.log.info("switch displays")
