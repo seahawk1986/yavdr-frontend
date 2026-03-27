@@ -25,8 +25,8 @@ class DisplayConfigConnector(BaseModel):
 
 
 class OutputConnector(BaseModel):
-    drm_name: str
-    edid: str
+    drm_name: str | None
+    edid: str | None
     xrandr_name: str
 
 
@@ -71,12 +71,15 @@ def load_facts() -> tuple[OutputConnector | None, OutputConnector | None]:
     else:
         if not display_config.primary:
             raise ValueError("no primary display")
-        primary_display: OutputConnector = getattr(
-            display_outputs.connectors, display_config.primary.connector
-        )
+        if display_config.primary:
+            primary_display: OutputConnector | None = display_outputs.connectors.get(
+                display_config.primary.connector, None
+            )
+        else:
+            primary_display = None
         if display_config.secondary:
-            secondary_display: OutputConnector | None = getattr(
-                display_outputs.connectors, display_config.secondary.connector
+            secondary_display: OutputConnector | None = display_outputs.connectors.get(
+                display_config.secondary.connector, None
             )
         else:
             secondary_display = None
