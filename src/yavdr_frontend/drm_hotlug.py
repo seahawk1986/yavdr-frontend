@@ -1,4 +1,5 @@
 import asyncio
+import re
 import subprocess
 import sys
 
@@ -89,14 +90,17 @@ def load_facts() -> tuple[OutputConnector | None, OutputConnector | None]:
 
 def check_configured_display(display: str) -> bool:
     try:
+        primary_display, _secondary_display = load_facts()
         r = subprocess.run(
-            ["xrandr", "-d", display, "--listactivemonitors"],
+            ["xrandr", "-d", display],
             check=True,
             capture_output=True,
             text=True,
         )
 
-        if "*" in r.stdout:
+        if primary_display and re.search(
+            rf"{primary_display.xrandr_name}\s+connected", r.stdout
+        ):
             return True
     except Exception as err:
         log.exception(f"could not read xrandr output: {err}")
