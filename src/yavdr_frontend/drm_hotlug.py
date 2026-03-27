@@ -91,6 +91,8 @@ def load_facts() -> tuple[OutputConnector | None, OutputConnector | None]:
 def check_configured_display(display: str) -> bool:
     try:
         primary_display, _secondary_display = load_facts()
+        if not primary_display:
+            return True
         r = subprocess.run(
             ["xrandr", "-d", display],
             check=True,
@@ -98,9 +100,7 @@ def check_configured_display(display: str) -> bool:
             text=True,
         )
 
-        if primary_display and re.search(
-            rf"{primary_display.xrandr_name}\s+connected", r.stdout
-        ):
+        if re.search(rf"{primary_display.xrandr_name}\s+connected", r.stdout):
             return True
     except Exception as err:
         log.exception(f"could not read xrandr output: {err}")
