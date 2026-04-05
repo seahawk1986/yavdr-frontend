@@ -107,6 +107,13 @@ def check_configured_display(display: str) -> bool:
     return False
 
 
+async def poll_xorg(display: str):
+    while True:
+        if check_configured_display(display):
+            return
+        await asyncio.sleep(0.5)
+
+
 async def set_display_config(connector: str, display: str) -> bool:
     cmd = [
         "xrandr",
