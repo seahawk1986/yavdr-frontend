@@ -66,10 +66,12 @@ class GenericVDRFrontend(VDRFrontendProtocol):
     async def status_message(self, status: str) -> None:
         self.log.info(f"{await self.frontend_is_running()=}")
 
+
 class SofthddeviceStatusEnum(IntEnum):
     ATTACHED = 910
     SUSPEND_NORMAL = 911
     SUSPEND_DETACHED = 912
+
 
 class SofthdBaseClass(GenericVDRFrontend):
     name = "changeme"
@@ -232,8 +234,6 @@ class SofthdBaseClass(GenericVDRFrontend):
             # self.log.debug("frontend does not need to resume")
             return False
 
-
-
     async def check_state(self):
         code, _msg = await self._svdrpcmd(cmd="stat")
         self.log.debug(f"check_state(): got status code: {code}")
@@ -291,3 +291,58 @@ class SofthdBaseClass(GenericVDRFrontend):
                     "needed %0.3f s to switch primary device", (time.time() - ts_start)
                 )
                 break
+
+
+class GBMVDRFrontend(GenericVDRFrontend):
+    def __init__(self, controller: VDRController):
+        self.log = create_log_handler(self.name)
+        # self.dbus2vdr = controller.vdr
+        self.yavdr_system_controller = (
+            None  # TODO: connect to the yavdr system frontend as controller
+        )
+        # self.vdr_controller = controller
+        # self.controller = controller.controller
+
+    async def start(self, options: str | None = None) -> bool:
+        if not await self.frontend_is_running():
+            try:
+                # await self.controller.dbus2vdr.vdr_device.request_primary()
+                await self.vdr_controller.dbus2vdr.request_primary_by_name(self.name)
+            except Exception as error:
+                self.log.exception(error)
+            else:
+                return True
+        return False
+
+    async def stop(self) -> bool:
+        try:
+            idx = await self.vdr_controller.dbus2vdr.vdr_device.get_null_device()
+            await self.vdr_controller.dbus2vdr.vdr_device.request_primary(idx)
+        except Exception as e:
+            self.log.exception(e)
+            return False
+        else:
+            await self.vdr_controller.on_stopped(self)
+            return True
+
+    async def frontend_is_running(self) -> bool:
+        current_primary_device = VDRDevice(
+            *await self.vdr_controller.dbus2vdr.vdr_device.get_primary()
+        )
+        if current_primary_device.name:
+            state = True
+        else:
+            state = False
+        logging.debug(
+            f"{self.name}: is_running: {state} with {current_primary_device=}"
+        )
+        return state
+
+    async def started(self) -> None:
+        raise NotImplementedError
+
+    async def stopped(self) -> None:
+        raise NotImplementedError
+
+    async def status_message(self, status: str) -> None:
+        self.log.info(f"{await self.frontend_is_running()=}")
