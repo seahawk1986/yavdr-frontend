@@ -299,9 +299,8 @@ class Controller(NeedsControllerProtocol):
                 except Exception as e:
                     self.log.exception(e)
                     result = (False, repr(e))
-                finally:
-                    self.log.debug("stop() got result %s", result)
-                    return result
+                self.log.debug("stop() got result %s", result)
+                return result
         return (True, "already stopped")
 
     async def on_stopped(self, caller: FrontendProtocol):

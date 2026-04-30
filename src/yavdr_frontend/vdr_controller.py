@@ -225,8 +225,7 @@ class VDRController(FrontendProtocol):
                 await self.dbus2vdr.vdr_remote.disable()
         except Exception as e:
             self.log.exception(e)
-        finally:
-            return True
+        return True
 
     async def get_systemd_unit_names(self) -> list[str]:
         """
@@ -486,6 +485,7 @@ class VDRController(FrontendProtocol):
 
 class VDRStatusProtocol(Protocol):
     vdr_stopping: bool
+
     @abstractmethod
     def __init__(
         self,

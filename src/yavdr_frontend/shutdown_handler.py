@@ -63,5 +63,5 @@ class VDRShutdownHandler(ShutdownHandlerProtocol):
                 await self.vdr_remote.disable()
         except Exception as e:
             self.log.exception(e)
-        finally:
-            return True
+
+        return True
