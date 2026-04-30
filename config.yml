@@ -96,6 +96,7 @@ vdr:
     vaapivideo:
       module_name: yavdr_frontend.frontends.vaapivideo
       class_name: Vaapivideo
+      use_pwsuspend: True
 
     xineliboutput:
       unit_name: vdr-sxfe.service
