@@ -94,7 +94,7 @@ vdr:
       class_name: Rpihddevice
 
     vaapivideo:
-      module_name: yavdr_frontend.frontends.vaapidevice
+      module_name: yavdr_frontend.frontends.vaapivideo
       class_name: Vaapivideo
 
     xineliboutput:
