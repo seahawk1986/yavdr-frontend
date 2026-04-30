@@ -113,47 +113,6 @@ async def pwresume() -> bool:
     return False
 
 
-# def pasuspend():
-#     """call yavdr-pasuspend to suspend pulseaudio output"""
-#     try:
-#         subprocess.call(["yavdr-pasuspend", "-s"])
-#     except Exception as e:
-#         logging.warning("could not suspend pulseaudio output")
-#         logging.exception(e)
-#         return False
-#     else:
-#         logging.debug("successfully called yavdr-pasuspend -s")
-#         time.sleep(0.1)
-#         return True
-
-
-# async def paresume():
-#     """call yavdr-pasuspend to resume pulseaudio output"""
-#     # try to wait until vdr has released all sound devices
-#     # if wait-for-vdr-snd-release can't be executed successfully
-#     # sleep for timeout specified
-
-#     # TODO: make timeout configurable in configuration file
-#     timeout = 3
-#     try:
-#         subprocess.run(["wait-for-vdr-snd-release"], check=True)
-#     except Exception as e:
-#         logging.exception(e)
-#         logging.debug("waiting for %d seconds", timeout)
-#         await asyncio.sleep(timeout)
-
-#     try:
-#         subprocess.run(["yavdr-pasuspend", "-r"], check=True)
-#     except Exception as e:
-#         logging.warning("could not resume pulseaudio output")
-#         logging.exception(e)
-#         return False
-#     else:
-#         logging.debug("successfully called yavdr-pasuspend -r")
-#         await asyncio.sleep(0.1)
-#         return True
-
-
 def feh_set_background(
     path: str | Path,
     fill: bool = False,

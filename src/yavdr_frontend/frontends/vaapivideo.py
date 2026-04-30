@@ -60,7 +60,7 @@ class Vaapivideo(SofthdBaseClass):
             self.log.exception(f"unknown status {code=}: {e}")
 
     async def start(self, options: str | None | list[str] = None) -> bool:
-        """suspend pulseaudio if configured and attach softhdcuvid"""
+        """suspend pipewire if configured and attach softhdcuvid"""
         if self.use_pwsuspend:
             pwsuspend()
         options = ""
@@ -111,7 +111,7 @@ class Vaapivideo(SofthdBaseClass):
     async def stop(self, options: str = "") -> bool:
         """
         perform necessary actions to detach softhdcuvid,
-        resume pulseaudio if configured
+        resume pipewire if configured
         """
         try:
             await self.resume()
