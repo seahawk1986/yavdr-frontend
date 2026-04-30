@@ -66,7 +66,7 @@ class BackgroundType(enum.StrEnum):
 
 class NamedFrontend(BaseModel):
     name: str
-    use_pasuspend: bool = Field(default=False)
+    use_pwsuspend: bool = Field(default=False)
     bus: DBusEnum = Field(default=DBusEnum.SessionBus)
 
     def __hash__(self) -> NonNegativeInt:
@@ -74,14 +74,14 @@ class NamedFrontend(BaseModel):
             (
                 "NamedFrontend",
                 self.name,
-                self.use_pasuspend,
+                self.use_pwsuspend,
             )
         )
 
 
 class DesktopAppFrontendConfig(BaseModel):
     app_name: str
-    use_pasuspend: bool = Field(default=False)
+    use_pwsuspend: bool = Field(default=False)
     bus: DBusEnum = Field(default=DBusEnum.SessionBus)
 
     def __hash__(self) -> NonNegativeInt:
@@ -89,14 +89,14 @@ class DesktopAppFrontendConfig(BaseModel):
             (
                 "DesktopAppFrontendConfig",
                 self.app_name,
-                self.use_pasuspend,
+                self.use_pwsuspend,
             )
         )
 
 
 class UnitFrontendConfig(BaseModel):
     unit_name: str
-    use_pasuspend: bool = Field(default=False)
+    use_pwsuspend: bool = Field(default=False)
     bus: DBusEnum = Field(default=DBusEnum.SessionBus)
 
     def __hash__(self) -> NonNegativeInt:
@@ -104,7 +104,7 @@ class UnitFrontendConfig(BaseModel):
             (
                 "UnitFrontendConfig",
                 self.unit_name,
-                self.use_pasuspend,
+                self.use_pwsuspend,
             )
         )
 
@@ -112,7 +112,7 @@ class UnitFrontendConfig(BaseModel):
 class ModuleFrontendConfig(BaseModel):
     module_name: str
     class_name: str
-    use_pasuspend: bool = Field(default=False)
+    use_pwsuspend: bool = Field(default=False)
     bus: DBusEnum = Field(default=DBusEnum.SessionBus)
 
     def __hash__(self) -> NonNegativeInt:
@@ -121,7 +121,7 @@ class ModuleFrontendConfig(BaseModel):
                 "ModuleFrontendConfig",
                 self.module_name,
                 self.class_name,
-                self.use_pasuspend,
+                self.use_pwsuspend,
             )
         )
 

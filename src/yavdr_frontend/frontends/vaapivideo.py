@@ -1,12 +1,14 @@
 import asyncio
 from enum import IntEnum
 import subprocess
+from types import CoroutineType
 from typing import Any
 
 from yavdr_frontend.frontends.generic_vdr_frontend import (
     SofthdBaseClass,
     SofthddeviceStatusEnum,
 )
+from yavdr_frontend.tools import pwresume, pwsuspend
 
 
 class VaapivideoStatusEnum(IntEnum):
@@ -59,12 +61,8 @@ class Vaapivideo(SofthdBaseClass):
 
     async def start(self, options: str | None | list[str] = None) -> bool:
         """suspend pulseaudio if configured and attach softhdcuvid"""
-        # if self.use_pasuspend:
-        #     pasuspend()
-        subprocess.run(
-            ["systemctl", "--user", "stop", "pipewire.socket", "pipewire.service"],
-            check=True,
-        )
+        if self.use_pwsuspend:
+            pwsuspend()
         options = ""
         self.log.debug(f"{await self.status()=}, {await self.resume()=}")
         if not await self.frontend_is_running() and not await self.resume():
@@ -119,23 +117,12 @@ class Vaapivideo(SofthdBaseClass):
             await self.resume()
             if await self.frontend_is_running():
                 r = await self.deta()
-                # if self.use_pasuspend:
-                #     await paresume()
-                # TODO: reenable pipewire
                 self.log.debug(f"deta returned: {r}")
                 if r:
                     r = subprocess.run(["sudo", "/usr/bin/chvt", "7"], check=True)
                     await self.vdrcontroller.on_stopped(self)
-                    subprocess.run(
-                        [
-                            "systemctl",
-                            "--user",
-                            "start",
-                            "pipewire.socket",
-                            "pipewire.service",
-                        ],
-                        check=True,
-                    )
+                    if self.use_pwsuspend:
+                        await pwresume()
                     return r.returncode == 0
         except TypeError:
             pass

@@ -72,27 +72,23 @@ def get_object_from_module(
         return cast(type[SystemFrontendProtocol], getattr(_module, object_name))
 
 
-def pasuspend():
-    """call yavdr-pasuspend to suspend pulseaudio output"""
+def pwsuspend() -> bool:
+    """stop pipewire"""
     try:
-        subprocess.call(["yavdr-pasuspend", "-s"])
-    except Exception as e:
-        logging.warning("could not suspend pulseaudio output")
-        logging.exception(e)
-        return False
-    else:
-        logging.debug("successfully called yavdr-pasuspend -s")
-        time.sleep(0.1)
+        subprocess.run(
+            ["systemctl", "--user", "stop", "pipewire.socket", "pipewire.service"],
+            check=True,
+        )
         return True
+    except subprocess.SubprocessError:
+        logging.exception("could not stop pipewire.service")
+    except Exception:
+        logging.exception("unexpected error stopping pipewire")
+    return False
 
 
-async def paresume():
-    """call yavdr-pasuspend to resume pulseaudio output"""
-    # try to wait until vdr has released all sound devices
-    # if wait-for-vdr-snd-release can't be executed successfully
-    # sleep for timeout specified
-
-    # TODO: make timeout configurable in configuration file
+async def pwresume() -> bool:
+    """start pipewire"""
     timeout = 3
     try:
         subprocess.run(["wait-for-vdr-snd-release"], check=True)
@@ -102,15 +98,60 @@ async def paresume():
         await asyncio.sleep(timeout)
 
     try:
-        subprocess.run(["yavdr-pasuspend", "-r"], check=True)
-    except Exception as e:
-        logging.warning("could not resume pulseaudio output")
-        logging.exception(e)
-        return False
+        subprocess.run(
+            ["systemctl", "--user", "start", "pipewire.socket", "pipewire.service"],
+            check=True,
+        )
+    except subprocess.SubprocessError:
+        logging.exception("could not resume pipewire.service")
+    except Exception:
+        logging.exception("unexpected error when resuming pipewire")
     else:
-        logging.debug("successfully called yavdr-pasuspend -r")
+        logging.debug("successfully started pipewire")
         await asyncio.sleep(0.1)
         return True
+    return False
+
+
+# def pasuspend():
+#     """call yavdr-pasuspend to suspend pulseaudio output"""
+#     try:
+#         subprocess.call(["yavdr-pasuspend", "-s"])
+#     except Exception as e:
+#         logging.warning("could not suspend pulseaudio output")
+#         logging.exception(e)
+#         return False
+#     else:
+#         logging.debug("successfully called yavdr-pasuspend -s")
+#         time.sleep(0.1)
+#         return True
+
+
+# async def paresume():
+#     """call yavdr-pasuspend to resume pulseaudio output"""
+#     # try to wait until vdr has released all sound devices
+#     # if wait-for-vdr-snd-release can't be executed successfully
+#     # sleep for timeout specified
+
+#     # TODO: make timeout configurable in configuration file
+#     timeout = 3
+#     try:
+#         subprocess.run(["wait-for-vdr-snd-release"], check=True)
+#     except Exception as e:
+#         logging.exception(e)
+#         logging.debug("waiting for %d seconds", timeout)
+#         await asyncio.sleep(timeout)
+
+#     try:
+#         subprocess.run(["yavdr-pasuspend", "-r"], check=True)
+#     except Exception as e:
+#         logging.warning("could not resume pulseaudio output")
+#         logging.exception(e)
+#         return False
+#     else:
+#         logging.debug("successfully called yavdr-pasuspend -r")
+#         await asyncio.sleep(0.1)
+#         return True
 
 
 def feh_set_background(

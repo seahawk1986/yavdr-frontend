@@ -2,7 +2,7 @@ from enum import IntEnum
 import logging
 import time
 from yavdr_frontend.loghandler import create_log_handler
-from yavdr_frontend.tools import pasuspend, paresume
+from yavdr_frontend.tools import pwresume, pwsuspend
 from yavdr_frontend.protocols.frontend_protocols import (
     FrontendStatusEnum,
     VDRFrontendProtocol,
@@ -86,8 +86,8 @@ class SofthdBaseClass(GenericVDRFrontend):
         self.shddevice_config = self.vdrcontroller.controller.config.vdr.frontends[
             self.name
         ]
-        self.use_pasuspend = self.shddevice_config.use_pasuspend
-        self.log.debug("use_pasuspend is %s", self.use_pasuspend)
+        self.use_pwsuspend = self.shddevice_config.use_pwsuspend
+        self.log.debug("use_pwsuspend is %s", self.use_pwsuspend)
 
     async def __async_init__(self):
         self.plugin_proxy = DeTvdrVdrPluginInterface.new_proxy(
@@ -186,8 +186,8 @@ class SofthdBaseClass(GenericVDRFrontend):
 
     async def start(self, options: str | None | list[str] = None) -> bool:
         """suspend pulseaudio if configured and attach softhdcuvid"""
-        if self.use_pasuspend:
-            pasuspend()
+        if self.use_pwsuspend:
+            pwsuspend()
         if options:
             if isinstance(options, str):
                 pass
@@ -212,8 +212,8 @@ class SofthdBaseClass(GenericVDRFrontend):
             await self.resume()
             if await self.frontend_is_running():
                 r = await self.deta()
-                if self.use_pasuspend:
-                    await paresume()
+                if self.use_pwsuspend:
+                    await pwresume()
                 await self.vdrcontroller.on_stopped(self)
                 return r
         except TypeError:

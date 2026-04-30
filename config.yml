@@ -37,16 +37,16 @@ applications: # predefined applications
   #       optionally you can set the bus the unit runs on:
   #       bus: SessionBus|SystemBus
   #       and you can suspend pulseaudio if necessary:
-  #       use_pasuspend: True|False
+  #       use_pwsuspend: True|False
   vdr:
     module_name: yavdr_frontend.vdr_controller
     class_name: VDRController
-    use_pasuspend: False
+    use_pwsuspend: False
 
   mediacenter:
     name: kodi
     bus: SessionBus
-    use_pasuspend: False
+    use_pwsuspend: False
 
   browser:
     name: firefox
@@ -67,27 +67,27 @@ vdr:
     softhddrm:
       module_name: yavdr_frontend.frontends.softhddrm
       class_name: Softhddrm
-      use_pasuspend: False # suspend pulseaudio while softhddrm is active, so it has direct ALSA access
+      use_pwsuspend: False # suspend pulseaudio while softhddrm is active, so it has direct ALSA access
 
     softhdcuvid:
       module_name: yavdr_frontend.frontends.softhdcuvid
       class_name: Softhdcuvid
-      use_pasuspend: False # suspend pulseaudio while softhdcuvid is active, so it has direct ALSA access
+      use_pwsuspend: False # suspend pulseaudio while softhdcuvid is active, so it has direct ALSA access
 
     softhdvaapi:
       module_name: yavdr_frontend.frontends.softhdvaapi
       class_name: Softhdvaapi
-      use_pasuspend: False # suspend pulseaudio while softhddevice is active, so it has direct ALSA access
+      use_pwsuspend: False # suspend pulseaudio while softhddevice is active, so it has direct ALSA access
 
     softhddevice:
       module_name: yavdr_frontend.frontends.softhddevice
       class_name: Softhddevice
-      use_pasuspend: False # suspend pulseaudio while softhddevice is active, so it has direct ALSA access
+      use_pwsuspend: False # suspend pulseaudio while softhddevice is active, so it has direct ALSA access
 
     vaapidevice:
       module_name: yavdr_frontend.frontends.vaapivideo
       class_name: VAAPIDevice
-      use_pasuspend: False # suspend pulseaudio while softhddevice is active, so it has direct ALSA access
+      use_pwsuspend: False # suspend pulseaudio while softhddevice is active, so it has direct ALSA access
 
     rpihddevice:
       module_name: yavdr_frontend.frontends.rpihddevice

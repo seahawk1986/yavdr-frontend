@@ -46,7 +46,7 @@ async def system_frontend_factory(
         frontend = await SystemdUnitFrontend(
             UnitFrontendConfig(
                 unit_name=unit_name,
-                use_pasuspend=config.use_pasuspend,
+                use_pwsuspend=config.use_pwsuspend,
                 bus=config.bus,
             ),
             controller=controller,
@@ -58,7 +58,7 @@ async def system_frontend_factory(
         frontend = await SystemdUnitFrontend(
             UnitFrontendConfig(
                 unit_name=unit_name,
-                use_pasuspend=config.use_pasuspend,
+                use_pwsuspend=config.use_pwsuspend,
                 bus=config.bus,
             ),
             controller=controller,
@@ -88,7 +88,7 @@ async def system_frontend_factory(
                         return await system_frontend_factory(
                             config=DesktopAppFrontendConfig(
                                 app_name=id,
-                                use_pasuspend=False,
+                                use_pwsuspend=False,
                                 bus=controller.config.main.systemd_bus,
                             ),
                             controller=controller,
@@ -98,7 +98,7 @@ async def system_frontend_factory(
                 return await SystemdUnitFrontend(
                     config=UnitFrontendConfig(
                         unit_name=config.name,
-                        use_pasuspend=config.use_pasuspend,
+                        use_pwsuspend=config.use_pwsuspend,
                         bus=config.bus,
                     ),
                     controller=controller,
@@ -118,7 +118,7 @@ async def system_frontend_factory(
                         return await SystemdUnitFrontend(
                             config=UnitFrontendConfig(
                                 unit_name=unit_name,
-                                use_pasuspend=False,
+                                use_pwsuspend=False,
                                 bus=controller.config.main.systemd_bus,
                             ),
                             controller=controller,
@@ -135,7 +135,7 @@ async def system_frontend_factory(
         # ) in await controller.get_systemd_unit_names():
         #     return await SystemdUnitFrontend(
         #         config=UnitFrontendConfig(
-        #             unit_name=name, use_pasuspend=config.use_pasuspend, bus=config.bus
+        #             unit_name=name, use_pwsuspend=config.use_pwsuspend, bus=config.bus
         #         ),
         #         controller=controller,
         #         fe_type="unit",
@@ -144,7 +144,7 @@ async def system_frontend_factory(
         #     return await SystemdUnitFrontend(
         #         config=UnitFrontendConfig(
         #             unit_name=systemd_escape_app(app_name=config.name),
-        #             use_pasuspend=config.use_pasuspend,
+        #             use_pwsuspend=config.use_pwsuspend,
         #             bus=config.bus,
         #         ),
         #         controller=controller,
