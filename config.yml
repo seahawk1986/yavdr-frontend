@@ -45,8 +45,8 @@ applications: # predefined applications
 
   mediacenter:
     name: kodi
-    bus: SessionBus
-    use_pwsuspend: False
+    #bus: SessionBus
+    #use_pwsuspend: False
 
   browser:
     name: firefox
