@@ -78,18 +78,17 @@ class Vaapivideo(SofthdBaseClass):
             Attach plugin.
         """
 
-        # TODO: switch to VT9 (VDR)
-        r = subprocess.run(["sudo", "/usr/bin/chvt", "9"], check=True)
-        if r.returncode == 0:
-            result = await self.change_state(
-                action="atta",
-                options="",
-                expected_state=SofthddeviceStatusEnum.ATTACHED,
-                logmsg="attached",
-            )
+        # switch to VT9 (VDR) - vaapivideo does this itself
+        # r = subprocess.run(["sudo", "/usr/bin/chvt", "9"], check=True)
+        # if r.returncode == 0:
+        result = await self.change_state(
+            action="atta",
+            options="",
+            expected_state=SofthddeviceStatusEnum.ATTACHED,
+            logmsg="attached",
+        )
 
-            return result
-        return False
+        return result
 
     def deta(self) -> CoroutineType[Any, Any, bool]:
         """detach softhddevice style frontend
@@ -119,11 +118,11 @@ class Vaapivideo(SofthdBaseClass):
                 r = await self.deta()
                 self.log.debug(f"deta returned: {r}")
                 if r:
-                    r = subprocess.run(["sudo", "/usr/bin/chvt", "7"], check=True)
+                    # r = subprocess.run(["sudo", "/usr/bin/chvt", "7"], check=True)
                     await self.vdrcontroller.on_stopped(self)
                     if self.use_pwsuspend:
                         await pwresume()
-                    return r.returncode == 0
+                    return r
         except TypeError:
             pass
         except Exception as e:
