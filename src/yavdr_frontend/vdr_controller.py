@@ -261,6 +261,7 @@ class VDRController(FrontendProtocol):
                 else:
                     self.frontend = frontend
                     self.log.debug(f"set {frontend=}")
+                    self.is_xorg_client = frontend.is_xorg_client
                     return  # stop searching if we got a match
             # else:
             #     self.log.debug(f"could not find config for {plugin}")

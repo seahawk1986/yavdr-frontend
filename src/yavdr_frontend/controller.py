@@ -246,7 +246,12 @@ class Controller(NeedsControllerProtocol):
         return await self.frontends[0].frontend_is_running()
 
     async def start(self) -> tuple[bool, str]:
-        if not check_configured_display(os.environ.get("DISPLAY", ":0")):
+        # we need to check if we have a system unit that does not use the Xorg server, otherwise
+        # looking for a connected monitor is pointless
+        is_xorg_client = self.current_frontend and self.current_frontend.is_xorg_client
+        if is_xorg_client and not check_configured_display(
+            os.environ.get("DISPLAY", ":0")
+        ):
             self.log.info("no configured display found, don't start yet")
             return False, ("no configured display found")
         self.expect_user_activity = False
@@ -569,7 +574,7 @@ class Controller(NeedsControllerProtocol):
         """
 
         primary_display, secondary_display = load_facts()
-        await drm_hotplug(primary_display, secondary_display)
+        await drm_hotplug(primary_display, secondary_display, self)
         await asyncio.sleep(0.5)
         await self.set_background(BackgroundType.NORMAL)
         await self.start()

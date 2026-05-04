@@ -66,6 +66,7 @@ class BackgroundType(enum.StrEnum):
 
 class NamedFrontend(BaseModel):
     name: str
+    is_xorg_client: bool = Field(default=True)
     use_pwsuspend: bool = Field(default=False)
     bus: DBusEnum = Field(default=DBusEnum.SessionBus)
 
@@ -74,6 +75,7 @@ class NamedFrontend(BaseModel):
             (
                 "NamedFrontend",
                 self.name,
+                self.is_xorg_client,
                 self.use_pwsuspend,
             )
         )

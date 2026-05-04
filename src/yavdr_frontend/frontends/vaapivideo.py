@@ -18,6 +18,7 @@ class VaapivideoStatusEnum(IntEnum):
 
 class Vaapivideo(SofthdBaseClass):
     name = "vaapivideo"
+    is_xorg_client = False
 
     async def change_state(
         self,
@@ -118,11 +119,12 @@ class Vaapivideo(SofthdBaseClass):
                 r = await self.deta()
                 self.log.debug(f"deta returned: {r}")
                 if r:
-                    # r = subprocess.run(["sudo", "/usr/bin/chvt", "7"], check=True)
-                    await self.vdrcontroller.on_stopped(self)
-                    if self.use_pwsuspend:
-                        await pwresume()
-                    return r
+                    r = subprocess.run(["sudo", "/usr/bin/chvt", "7"], check=True)
+                    if result := r.returncode == 0:
+                        await self.vdrcontroller.on_stopped(self)
+                        if self.use_pwsuspend:
+                            await pwresume()
+                    return result
         except TypeError:
             pass
         except Exception as e:

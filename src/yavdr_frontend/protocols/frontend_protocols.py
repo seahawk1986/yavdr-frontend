@@ -31,6 +31,7 @@ class FrontendProtocol(Protocol):
     name: str
     fe_type: str
     # is_running: bool
+    is_xorg_client: bool = True
     stop_on_shutdown: bool
     prepare_shutdown_timeout: float = 0.0
     instant_shutdown_timeout: float = 0.0

@@ -4,13 +4,16 @@ import subprocess
 import sys
 
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, TYPE_CHECKING
 
-from pydantic import BaseModel, BeforeValidator, Field
 import yaml
+from pydantic import BaseModel, BeforeValidator, Field
 
-from yavdr_frontend.config import LoggingEnum
 from yavdr_frontend.loghandler import create_log_handler
+from yavdr_frontend.config import LoggingEnum
+
+if TYPE_CHECKING:
+    from yavdr_frontend.controller import Controller
 
 DRM_BASE_PATH = Path("/sys/class/drm/")
 
@@ -137,6 +140,7 @@ async def set_display_config(connector: str, display: str) -> bool:
 async def drm_hotplug(
     primary_display: OutputConnector | None,
     secondary_display: OutputConnector | None,
+    controller: Controller,
 ) -> None:
     await asyncio.sleep(5)  # give the kernel time to update the state
     for n, connector in enumerate(filter(None, (primary_display, secondary_display))):
@@ -150,6 +154,14 @@ async def drm_hotplug(
                         edid = edid_path.read_bytes()
                         if edid.strip():
                             log.debug("got edid data")
+                            is_x_client = (
+                                controller.current_frontend
+                                and controller.current_frontend.is_xorg_client
+                            )
+                            if not is_x_client:
+                                # in this case it makes no sense to try to look for an active output mode
+                                break
+
                             if not await set_display_config(
                                 connector.xrandr_name.replace("-", ""), f":0.{n}"
                             ):
