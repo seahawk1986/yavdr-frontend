@@ -80,16 +80,17 @@ class Vaapivideo(SofthdBaseClass):
         """
 
         # switch to VT9 (VDR) - vaapivideo does this itself
-        # r = subprocess.run(["sudo", "/usr/bin/chvt", "9"], check=True)
-        # if r.returncode == 0:
-        result = await self.change_state(
-            action="atta",
-            options="",
-            expected_state=SofthddeviceStatusEnum.ATTACHED,
-            logmsg="attached",
-        )
+        r = subprocess.run(["sudo", "/usr/bin/chvt", "9"], check=True)
+        if r.returncode == 0:
+            result = await self.change_state(
+                action="atta",
+                options="",
+                expected_state=SofthddeviceStatusEnum.ATTACHED,
+                logmsg="attached",
+            )
 
-        return result
+            return result
+        return False
 
     def deta(self) -> CoroutineType[Any, Any, bool]:
         """detach softhddevice style frontend
