@@ -25,6 +25,7 @@ Multi-Arch: foreign
 Depends:
  ${python3:Depends},
  ${misc:Depends},
+ yavdr-frontend-tools
 Suggests:
  python-yavdr-frontend-doc,
 Description: frontend script for yaVDR (Python 3)
