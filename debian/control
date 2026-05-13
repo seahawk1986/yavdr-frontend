@@ -45,3 +45,8 @@ Description: Documentation for python-yavdr-frontend (common documentation)
  This package contains the documentation for the yavdr-frontend script
  .
  This is the common documentation package.
+
+Package: yavdr-frontend-tools
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Collection of tools used by python3-yavdrfrontend

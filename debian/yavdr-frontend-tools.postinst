@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        f="/usr/bin/wait-for-vdr-snd-release"
+        # only do something when no setting exists
+        if ! dpkg-statoverride --list $f >/dev/null 2>&1; then
+             dpkg-statoverride --update --add root root 4755 $f
+        fi
+        ;;
+esac
+
+
+
+#DEBHELPER#
+
+exit 0
