@@ -12,7 +12,6 @@ from yavdr_frontend.config import (
     BackgroundType,
     Config,
     FrontendConfig,
-    KeymapConfig,
     LoggingEnum,
     NamedFrontend,
     ShutdownEnum,

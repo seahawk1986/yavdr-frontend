@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Annotated, Any, TYPE_CHECKING
 
 import yaml
-from pydantic import BaseModel, BeforeValidator, Field
+from pydantic import BaseModel, BeforeValidator
 
 from yavdr_frontend.loghandler import create_log_handler
 from yavdr_frontend.config import LoggingEnum
@@ -129,7 +129,7 @@ async def set_display_config(connector: str, display: str) -> bool:
     ]
     log.debug(f"calling xrandr with '{' '.join(cmd)}'")
     try:
-        r = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        _r = subprocess.run(cmd, check=True, capture_output=True, text=True)
     except subprocess.SubprocessError as err:
         print(err, file=sys.stderr)
         await asyncio.sleep(1)
