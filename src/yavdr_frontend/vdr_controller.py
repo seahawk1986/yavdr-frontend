@@ -1,6 +1,7 @@
 from abc import abstractmethod
 import asyncio
 import enum
+import logging
 import os
 import time
 from collections.abc import Awaitable, Callable, Generator
@@ -85,7 +86,8 @@ class DBus2VDR:
     async def request_primary_by_name(self, name: str):
         devices = [VDRDevice(*d) for d in await self.vdr_device.list()]
         for device in devices:
-            if device.name == name:
+            if device.name == name or device.name.startswith(f"{name} "):
+                logging.info(f"switching to primary device {name=} with {device.idx=}")
                 return await self.vdr_device.request_primary(device.idx)
 
     async def svdrpcommand(
