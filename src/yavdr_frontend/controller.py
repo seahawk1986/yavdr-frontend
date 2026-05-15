@@ -4,6 +4,7 @@ from collections import deque
 from collections.abc import Coroutine
 import enum
 from functools import partial
+import inspect
 import os
 from typing import Any, Protocol, Self
 
@@ -190,7 +191,16 @@ class Controller(NeedsControllerProtocol):
             try:
                 func = getattr(self, keymap_entry.action)
                 if callable(func):
-                    func(keymap_entry.args)
+                    if inspect.iscoroutinefunction(func):
+                        self.log.debug(
+                            f"await '{func.__name__}' with {keymap_entry.args=}"
+                        )
+                        await func(keymap_entry.args)
+                    else:
+                        self.log.debug(
+                            f"call '{func.__name__} with {keymap_entry.args=}"
+                        )
+                        func(keymap_entry.args)
                 else:
                     raise ValueError(
                         f"on_keypress: {keymap_entry.action} is not callable"
@@ -522,6 +532,7 @@ class Controller(NeedsControllerProtocol):
         timeout = 10 if instant else 60 * 5
         if current_frontend := self.current_frontend:
             stop_on_shutdown = current_frontend.stop_on_shutdown
+            self.log.debug(f"{stop_on_shutdown=}")
 
             if stop_on_shutdown:
                 self.log.debug("stop current_frontend: %s", current_frontend.name)
