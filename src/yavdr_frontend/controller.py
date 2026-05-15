@@ -381,9 +381,8 @@ class Controller(NeedsControllerProtocol):
         except Exception as e:
             self.log.exception(e)
             result = (False, repr(e))
-        finally:
-            self.log.debug(f"switch(): got result {result}")
-            return result
+        self.log.debug(f"switch(): got result {result}")
+        return result
 
     async def switchto(self, next_frontend: str) -> bool:
         if next_frontend not in self.preconfigured_frontends:
