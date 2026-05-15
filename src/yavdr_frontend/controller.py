@@ -289,6 +289,7 @@ class Controller(NeedsControllerProtocol):
 
         self.log.debug(f"{self.current_frontend=}")
 
+        result = (True, "already stopped")
         if current_frontend := self.current_frontend:
             self.log.debug(f"stop: current frontend is {current_frontend.name}")
             is_running: bool = await current_frontend.frontend_is_running()
@@ -302,7 +303,7 @@ class Controller(NeedsControllerProtocol):
                     self.log.exception(e)
                     result = (False, repr(e))
                 self.log.debug("stop() got result %s", result)
-                return result
+
         if extern:
             match self.state:
                 case FrontendState.PREPARE_SHUTDOWN:
@@ -315,7 +316,8 @@ class Controller(NeedsControllerProtocol):
                     await self.set_background(BackgroundType.DETACHED)
             await self.set_frontend_state(FrontendState.STOP)
             self.expect_user_activity = True
-        return (True, "already stopped")
+
+        return result
 
     async def on_stopped(self, caller: FrontendProtocol):
         """this is the callback function after a frontend has been stopped"""
