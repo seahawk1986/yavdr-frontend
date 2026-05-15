@@ -75,7 +75,6 @@ class Controller(NeedsControllerProtocol):
     # primary DISPLAY
     display = ":0"
 
-    keymap: dict[str, KeymapConfig] = {}
     expect_user_activity = False
     poweroff_timer = None
     # TODO: do we need this?
@@ -88,6 +87,7 @@ class Controller(NeedsControllerProtocol):
     def __init__(self, config: "Config"):
         self.log = create_log_handler("Controller", LoggingEnum.DEBUG)
         self.config = config
+        self.keymap = config.lirc.keymap
         # self.current_frontend = None
         self.status_lock = asyncio.Lock()
         self.state: FrontendState = FrontendState.STOP
@@ -489,6 +489,7 @@ class Controller(NeedsControllerProtocol):
         self.poweroff_timer = None
 
     async def poweroff(self, instant: bool = False):
+        self.log.debug(f"called poweroff({instant=})")
         self.expect_user_activity = True
         self.clear_poweroff_timer()
         if not self.current_frontend:
@@ -509,6 +510,7 @@ class Controller(NeedsControllerProtocol):
         """
         switch back to vdr if vdr is not the current frontend otherwise call poweroff
         """
+        self.log.debug("called yavdr_compat_poweroff()")
 
         if (frontend := self.current_frontend) and frontend.fe_type != "vdr":
             await self.switchto("vdr")
