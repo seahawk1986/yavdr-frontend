@@ -496,7 +496,7 @@ class Controller(NeedsControllerProtocol):
             self.poweroff_timer.stop()
         self.poweroff_timer = None
 
-    async def poweroff(self, instant: bool = False):
+    async def poweroff(self, args: list[str] | None = None, instant: bool = False):
         self.log.debug(f"called poweroff({instant=})")
         self.expect_user_activity = True
         self.clear_poweroff_timer()
@@ -512,9 +512,11 @@ class Controller(NeedsControllerProtocol):
         self.shutdown_task = DelayedRepeatableTask(
             interval=timeout, callback=prepare_shutdown
         )
+        self.shutdown_task.start()
+        self.log.debug("created shutdown_task")
         return False  # ensure this method isn't called repeatedly
 
-    async def yavdr_compat_poweroff(self):
+    async def yavdr_compat_poweroff(self, args: list[str] | None = None):
         """
         switch back to vdr if vdr is not the current frontend otherwise call poweroff
         """
@@ -529,6 +531,7 @@ class Controller(NeedsControllerProtocol):
     # prepare_shutdown -> attempt_shutdown - >
     async def prepare_shutdown(self, instant: bool = False) -> bool:
         timeout = 10 if instant else 60 * 5
+        self.log.debug("called prepare_shutdown")
         if current_frontend := self.current_frontend:
             stop_on_shutdown = current_frontend.stop_on_shutdown
             self.log.debug(f"{stop_on_shutdown=}")
