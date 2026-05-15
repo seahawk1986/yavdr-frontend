@@ -3,7 +3,7 @@ from collections.abc import Awaitable
 from functools import partial
 import logging
 import time
-from typing import NoReturn
+from typing import Any, NoReturn
 from collections.abc import Callable
 from yavdr_frontend.loghandler import create_log_handler
 from yavdr_frontend.config import (
@@ -26,6 +26,7 @@ class LircProtocol(asyncio.Protocol):
         self.socket = config.socket
         self.on_keypress = on_keypress
         self.log = create_log_handler("LircProtocol", config.log_level)
+        self._running_tasks: set[asyncio.Task[Any]] = set()
 
     def connection_made(self, transport: asyncio.BaseTransport):
         self.log.debug(f"connected to {self.socket=}")
@@ -42,9 +43,10 @@ class LircProtocol(asyncio.Protocol):
             except ValueError as err:
                 self.log.exception(f"could not parse {line=}:\n{err}")
                 return
-            timestamp = self.last_ts
+            last_timestamp = self.last_ts
             previous_key = self.last_key
-            self.last_ts = time.monotonic_ns()
+            current_ts = time.monotonic_ns()
+            self.last_ts = current_ts
             self.last_key = key_name
             self.log.debug(
                 f"got key event: {code=}, {repeats=}, {key_name=}, {source=}"
@@ -55,18 +57,20 @@ class LircProtocol(asyncio.Protocol):
                 )
                 return
             self.log.debug(
-                f"{self.last_ts - timestamp=} <  {self.min_delta=} ? {(timestamp - self.last_ts) < self.min_delta}"
+                f"{abs(current_ts - last_timestamp)=} <  {self.min_delta=} ? {abs(current_ts - last_timestamp) < self.min_delta}"
             )
             if (
                 self.last_key == previous_key
-                and (timestamp - self.last_ts) < self.min_delta
+                and abs(current_ts - last_timestamp) < self.min_delta
             ):
                 self.log.debug(f"ignoring keypress within min_delta for {key_name}")
                 return
-            # TODO: do something with the keypress
-            asyncio.ensure_future(
+            t = asyncio.ensure_future(
                 self.on_keypress(key_name)
             )  # https://groups.google.com/g/python-tulip/c/z-IVH5RoDzo/m/SpZc0zTuPJsJ
+
+            self._running_tasks.add(t)
+            t.add_done_callback(self._running_tasks.discard)
 
     def error_received(self, exc: Exception):
         self.log.exception(f"Error received: {exc}")
