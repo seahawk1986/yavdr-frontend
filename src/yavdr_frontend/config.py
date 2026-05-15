@@ -9,6 +9,7 @@ from pydantic import (
     Field,
     NonNegativeFloat,
     NonNegativeInt,
+    StringConstraints,
     field_validator,
 )
 
@@ -160,33 +161,33 @@ class KeymapConfig(BaseModel):
     args: list[str] = Field(default_factory=list)
 
 
+NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
 class Connector(BaseModel):
-    drm_connector: str
-    xrandr_connector: str
+    drm_connector: NonEmptyStr
+    xrandr_connector: NonEmptyStr
     edid_name: str
 
 
-def check_drm_completeness(value: Any | dict[str, str]) -> Any:
+def check_drm_completeness(value: Any) -> dict[str, str] | None:
+    # TODO: is there a more elegant way to do this?
     if isinstance(value, dict):
-        if all(
-            (
-                bool(value.get("drm_connector")),
-                bool(value.get("xrandr_connector")),
-                bool(value.get("edid_name")),
+        try:
+            m = Connector.model_validate(value)
+            return m.model_dump()
+        except Exception:
+            logging.exception(
+                f"incomplete data for DRM connector: {value}, treating it as unconfigured"
             )
-        ):
-            return value
-    logging.warning(
-        f"incomplete data for DRM connector: {value}, treating it as unconfigured"
-    )
     return None
 
 
 class DRMConfig(BaseModel):
     primary: Annotated[Connector | None, BeforeValidator(check_drm_completeness)] = None
-    secondary: (
-        Annotated[Connector | None, BeforeValidator(check_drm_completeness)] | None
-    ) = None
+    secondary: Annotated[Connector | None, BeforeValidator(check_drm_completeness)] = (
+        None
+    )
 
 
 class LircConfig(BaseModel):
