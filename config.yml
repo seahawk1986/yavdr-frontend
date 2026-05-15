@@ -129,7 +129,7 @@ lirc:
 #                                   # switch to the second one, else switch to the first one
 #            args:
 #                - vdr
-#                - youtube
+#                - firefox
 
 drm:
   primary: null

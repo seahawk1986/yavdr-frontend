@@ -286,18 +286,6 @@ class Controller(NeedsControllerProtocol):
         started again by user activity. For internal calls that don't need to alter the state,
         use extern=False"""
         self.log.debug(f"called stop(extern={extern})")
-        if extern:
-            match self.state:
-                case FrontendState.PREPARE_SHUTDOWN:
-                    await self.set_background(BackgroundType.PREPARE_SHUTDOWN)
-                case FrontendState.QUIT:
-                    await self.set_background(BackgroundType.SHUTDOWN)
-                case FrontendState.RESTART:
-                    await self.set_background(BackgroundType.NORMAL)
-                case _:
-                    await self.set_background(BackgroundType.DETACHED)
-            await self.set_frontend_state(FrontendState.STOP)
-            self.expect_user_activity = True
 
         self.log.debug(f"{self.current_frontend=}")
 
@@ -315,6 +303,18 @@ class Controller(NeedsControllerProtocol):
                     result = (False, repr(e))
                 self.log.debug("stop() got result %s", result)
                 return result
+        if extern:
+            match self.state:
+                case FrontendState.PREPARE_SHUTDOWN:
+                    await self.set_background(BackgroundType.PREPARE_SHUTDOWN)
+                case FrontendState.QUIT:
+                    await self.set_background(BackgroundType.SHUTDOWN)
+                case FrontendState.RESTART:
+                    await self.set_background(BackgroundType.NORMAL)
+                case _:
+                    await self.set_background(BackgroundType.DETACHED)
+            await self.set_frontend_state(FrontendState.STOP)
+            self.expect_user_activity = True
         return (True, "already stopped")
 
     async def on_stopped(self, caller: FrontendProtocol):
