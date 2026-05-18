@@ -88,7 +88,8 @@ class DBus2VDR:
         for device in devices:
             if device.name == name or device.name.startswith(f"{name} "):
                 logging.info(f"switching to primary device {name=} with {device.idx=}")
-                return await self.vdr_device.request_primary(device.idx)
+                if not device.is_primary:
+                    return await self.vdr_device.request_primary(device.idx)
 
     async def svdrpcommand(
         self, plugin_name: str, cmd: str, option: str = ""
