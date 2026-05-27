@@ -510,11 +510,14 @@ class Controller(NeedsControllerProtocol):
             timeout = self.current_frontend.prepare_shutdown_timeout
 
         prepare_shutdown = partial(self.prepare_shutdown, instant=instant)
+        # make sure it has a __name__ attribute
+        prepare_shutdown.__name__ = self.prepare_shutdown.__name__  # pyright: ignore[reportAttributeAccessIssue]
 
         self.shutdown_task = DelayedRepeatableTask(
             interval=timeout, callback=prepare_shutdown
         )
         self.shutdown_task.start()
+        await asyncio.sleep(0.1)
         self.log.debug("created shutdown_task")
         return False  # ensure this method isn't called repeatedly
 
@@ -545,6 +548,7 @@ class Controller(NeedsControllerProtocol):
             self.poweroff_timer = DelayedRepeatableTask(
                 timeout, self.shutdown_handler.attempt_shutdown
             )
+            self.poweroff_timer.start()
         return False  # ensure this method isn't called by a GLib callback again
 
     async def on_vdr_shutdown_successfull(self) -> bool:

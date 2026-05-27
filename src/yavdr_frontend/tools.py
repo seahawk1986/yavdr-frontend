@@ -177,31 +177,48 @@ class DelayedRepeatableTask:
         self._stopped = asyncio.Event()
 
     async def _runner(self):
+        # call the callback method repeatably until it returns False
+        logging.debug(f"starting _runner for {self.callback.__name__}")
         try:
             while not self._stopped.is_set():
+                logging.debug(f"wait for timeout to call '{self.callback.__name__}'")
                 try:
                     # Wait for either stop signal or timeout
                     await asyncio.wait_for(self._stopped.wait(), timeout=self.interval)
+                    logging.debug(
+                        f"stopping DelayedRepeatableTask for {self.callback.__name__}"
+                    )
                     break  # If we got here, stop was signaled
                 except asyncio.TimeoutError:
-                    pass  # Timeout expired as expected
+                    pass  # Timeout expired as expected - try to run the callback
 
                 result = self.callback()
                 if asyncio.iscoroutine(result):
                     result = await result
+                # TODO: is this the right action? We need to repeat if a shutdown was not possible
+                # and break after it was successful
+                logging.debug(f"{self.callback.__name__} returned '{result=}'")
                 if result is False:
                     break
         except asyncio.CancelledError:
             pass
         finally:
             self._stopped.set()
+            logging.info(
+                f"shutting down DelayedRepeatableTask for {self.callback.__name__}"
+            )
 
     def start(self):
+        logging.debug(f"called start for {self.callback.__name__}")
         if not self._task or self._task.done():
             self._stopped.clear()
             self._task = asyncio.create_task(self._runner())
+            print(f"created task {self._task}")
+        else:
+            logging.debug(f"do nothing: {self._task=}")
 
     def stop(self):
+        logging.debug("called stop for DelayedRepeatableTask")
         self._stopped.set()
         if self._task:
             self._task.cancel()

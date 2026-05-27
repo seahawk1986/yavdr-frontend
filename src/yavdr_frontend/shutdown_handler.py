@@ -61,7 +61,9 @@ class VDRShutdownHandler(ShutdownHandlerProtocol):
                 await self.vdr_remote.enable()
                 await self.vdr_remote.hit_key("Power")
                 await self.vdr_remote.disable()
-        except Exception as e:
-            self.log.exception(e)
+        except asyncio.CancelledError:
+            return False
+        except Exception:
+            self.log.exception("shutdown attempt failed")
 
         return True
