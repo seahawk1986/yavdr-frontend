@@ -241,6 +241,12 @@ class Controller(NeedsControllerProtocol):
         await self.systemd_manager.set_environment(env_list)
 
     async def set_background(self, background_type: BackgroundType):
+        if (
+            self.shutdown_task
+            and self.shutdown_task.is_running()
+            and background_type != BackgroundType.SHUTDOWN
+        ):
+            background_type = BackgroundType.PREPARE_SHUTDOWN
         config: BackgroundConfig | None = self.config.backgrounds.get(background_type)
         env = os.environ
         env.update(await self.get_systemd_env())
