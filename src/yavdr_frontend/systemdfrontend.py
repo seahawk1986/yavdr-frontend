@@ -16,7 +16,7 @@ from yavdr_frontend.loghandler import create_log_handler
 from yavdr_frontend.protocols.frontend_protocols import (
     HasController,
 )
-from yavdr_frontend.tools import get_bus
+from yavdr_frontend.tools import get_bus, pwresume, pwsuspend
 from yavdr_frontend.interfaces.systemd_unit_interface import (
     OrgFreedesktopSystemd1UnitInterface,
 )
@@ -169,6 +169,9 @@ class SystemdUnitFrontend(
         )
         self.fe_type = fe_type
         self.controller = controller
+        self.use_pwsuspend = config.use_pwsuspend
+        self.log.debug("use_pwsuspend is %s", self.use_pwsuspend)
+
         self.systemd_bus = get_bus(config.bus)
         self.systemd_manager_proxy = create_systemd_manager_proxy(
             bus=self.systemd_bus,
@@ -195,8 +198,10 @@ class SystemdUnitFrontend(
     async def frontend_is_running(self) -> bool:
         return await self.unit.is_running()
 
-
     async def start(self):
+        if self.use_pwsuspend:
+            pwsuspend()
+
         self.is_active = True
         self.log.debug(f"starting {self.unit_name}")
         _success = await self.unit.start()
@@ -207,6 +212,8 @@ class SystemdUnitFrontend(
         self.is_active = False
         self.log.debug(f"stopping {self.unit_name}")
         _success = await self.unit.stop()
+        if self.use_pwsuspend:
+            await pwresume()
 
     async def stopped(self):
         # NOTE: we need to switch frontends if the systemd unit exited normally

@@ -88,7 +88,7 @@ async def system_frontend_factory(
                         return await system_frontend_factory(
                             config=DesktopAppFrontendConfig(
                                 app_name=id,
-                                use_pwsuspend=False,
+                                use_pwsuspend=config.use_pwsuspend,
                                 bus=controller.config.main.systemd_bus,
                             ),
                             controller=controller,
@@ -118,7 +118,7 @@ async def system_frontend_factory(
                         return await SystemdUnitFrontend(
                             config=UnitFrontendConfig(
                                 unit_name=unit_name,
-                                use_pwsuspend=False,
+                                use_pwsuspend=config.use_pwsuspend,
                                 bus=controller.config.main.systemd_bus,
                             ),
                             controller=controller,
