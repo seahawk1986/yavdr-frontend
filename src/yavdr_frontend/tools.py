@@ -99,7 +99,14 @@ async def pwresume() -> bool:
 
     try:
         subprocess.run(
-            ["systemctl", "--user", "start", "pipewire.socket", "pipewire.service"],
+            [
+                "systemctl",
+                "--user",
+                "start",
+                "pipewire.socket",
+                "pipewire.service",
+                "--job-mode=lenient",
+            ],
             check=True,
         )
     except subprocess.SubprocessError:
