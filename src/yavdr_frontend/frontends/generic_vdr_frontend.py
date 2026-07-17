@@ -278,7 +278,7 @@ class SofthdBaseClass(GenericVDRFrontend):
                 "nulldevice",
                 "vnsiserver",
             ):
-                self.log.debug(f"make {self.name} the primary device")
+                self.log.debug(f"make '{self.name}' the primary device")
                 # self._svdrpcmd('PRIM')
                 try:
                     response = await self.dbus2vdr.request_primary_by_name(self.name)

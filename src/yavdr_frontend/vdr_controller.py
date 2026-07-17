@@ -86,7 +86,7 @@ class DBus2VDR:
     async def request_primary_by_name(self, name: str):
         devices = [VDRDevice(*d) for d in await self.vdr_device.list()]
         for device in devices:
-            if device.name == name or device.name.startswith(f"{name} "):
+            if device.name == name or device.name.startswith(f"{name}"):
                 logging.info(f"switching to primary device {name=} with {device.idx=}")
                 if not device.is_primary:
                     return await self.vdr_device.request_primary(device.idx)
