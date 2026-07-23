@@ -82,14 +82,20 @@ class Vaapivideo(SofthdBaseClass):
         # switch to VT9 (VDR) - vaapivideo does this itself
         r = subprocess.run(["sudo", "/usr/bin/chvt", "9"], check=True)
         if r.returncode == 0:
-            result = await self.change_state(
-                action="atta",
-                options="",
-                expected_state=SofthddeviceStatusEnum.ATTACHED,
-                logmsg="attached",
-            )
+            for _ in range(5):
+                if not (
+                    result := await self.change_state(
+                        action="atta",
+                        options="",
+                        expected_state=SofthddeviceStatusEnum.ATTACHED,
+                        logmsg="attached",
+                    )
+                ):
+                    self.log.debug("attach failed, retry in 1 second ...")
+                    await asyncio.sleep(1)
+                else:
+                    return result
 
-            return result
         return False
 
     def deta(self) -> CoroutineType[Any, Any, bool]:
