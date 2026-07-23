@@ -129,6 +129,7 @@ class Vaapivideo(SofthdBaseClass):
                     r = subprocess.run(["sudo", "/usr/bin/chvt", "7"], check=True)
                     if result := r.returncode == 0:
                         await self.vdrcontroller.on_stopped(self)
+                        await asyncio.sleep(1)
                         if self.use_pwsuspend:
                             await pwresume()
                     return result
