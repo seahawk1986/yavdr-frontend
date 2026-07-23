@@ -210,6 +210,10 @@ class Controller(NeedsControllerProtocol):
         elif self.expect_user_activity:
             self.log.debug("we have user activity: attach frontend!")
             await self.start()
+        else:
+            # stop shutdown attempt on keypress
+            if self.shutdown_task and self.shutdown_task.is_running():
+                self.shutdown_task.stop()
 
     async def get_systemd_unit_names(self) -> list[str]:
         """
