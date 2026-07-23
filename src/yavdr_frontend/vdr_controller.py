@@ -383,64 +383,77 @@ class VDRController(FrontendProtocol):
         start_t: StartType = await self.start_type()
 
         self.log.debug(f"start_t has value {start_t}")
-        if start_t is StartType.OTHER_WAKEUP:
-            try:
-                (
-                    (_tuple_data),
-                    min_user_inactivity,
-                    _data,
-                ) = await self.dbus2vdr.vdr_setup.get("MinUserInactivity")
-                self.log.debug(f"VDR MinUserInactivity: {min_user_inactivity}")
+        match start_t:
+            case StartType.OTHER_WAKEUP:
+                try:
+                    (
+                        (_tuple_data),
+                        min_user_inactivity,
+                        _data,
+                    ) = await self.dbus2vdr.vdr_setup.get("MinUserInactivity")
+                    self.log.debug(f"VDR MinUserInactivity: {min_user_inactivity}")
 
-            except ValueError:
-                self.log.debug("Retrieving MinUserInactivity failed")
-                return
-            except Exception as e:
-                self.log.exception("Could not connect to dbus2vdr: %s", e)
-                return
-            else:
-                if min_user_inactivity > 0:
-                    shutdown_delay: float = 0.0
-                    try:
-                        shutdown_delay_response = (
-                            await self.dbus2vdr.vdr_setup.get("MinEventTimeout") * 60
-                        )
-                        (shutdown_delay_value, _msg) = shutdown_delay_response
-                        if shutdown_delay:
-                            shutdown_delay = float(
-                                cast(int | str, shutdown_delay_value)
-                            )  # here the dbus2vdr interface is a bit muddy
-                    except ValueError:
-                        self.log.debug("Retrieving MinEventTimeout failed")
-                    except Exception as e:
-                        self.log.exception("Could not connect to dbus2vdr: %s", e)
-                    finally:
-                        if "shudown_delay" not in locals():
-                            shutdown_delay = 30 * 60
-
-                        self.log.debug(f"shutdown_delay is {shutdown_delay} seconds")
-                        # NOTE: can we move this to the controller?
-                        if self.controller.shutdown_queue.empty():
-                            await self.controller.delay(
-                                shutdown_delay,
-                                self.controller.poweroff(instant=True),
+                except ValueError:
+                    self.log.debug("Retrieving MinUserInactivity failed")
+                    return
+                except Exception as e:
+                    self.log.exception("Could not connect to dbus2vdr: %s", e)
+                    return
+                else:
+                    if min_user_inactivity > 0:
+                        shutdown_delay: float = 0.0
+                        try:
+                            shutdown_delay_response = (
+                                await self.dbus2vdr.vdr_setup.get("MinEventTimeout")
+                                * 60
                             )
-                            # poweroff_timer = GLib.timeout_add_seconds(
-                            #   shutdown_delay, self.controller.poweroff, instant=True
-                            # )
+                            (shutdown_delay_value, _msg) = shutdown_delay_response
+                            if shutdown_delay:
+                                shutdown_delay = float(
+                                    cast(int | str, shutdown_delay_value)
+                                )  # here the dbus2vdr interface is a bit muddy
+                        except ValueError:
+                            self.log.debug("Retrieving MinEventTimeout failed")
+                        except Exception as e:
+                            self.log.exception("Could not connect to dbus2vdr: %s", e)
+                        finally:
+                            if "shudown_delay" not in locals():
+                                shutdown_delay = 30 * 60
 
-        if start_t == StartType.UNKNOWN:
-            return
-        else:
-            self.startup_state = StartupStateEnum.REGULAR
-            self.log.debug(f"setting {self.startup_state=:s}")
+                            self.log.debug(
+                                f"shutdown_delay is {shutdown_delay} seconds"
+                            )
+                            # NOTE: can we move this to the controller?
+                            if self.controller.shutdown_queue.empty():
+                                await self.controller.delay(
+                                    shutdown_delay,
+                                    self.controller.poweroff(instant=True),
+                                )
 
-        startup = self.controller.config.vdr.attach_on_startup
-        self.log.debug(f"attach_on_startup: {startup}")
+            case StartType.VDR_WAKEUP:
+                # in case of StartType.VDR_WAKEUP try to shutdown the system every 5 Minutes
+                if self.controller.shutdown_queue.empty():
+                    shutdown_delay = 5 * 60  # 5 Minutes
+                    await self.controller.delay(
+                        shutdown_delay,
+                        self.controller.poweroff(instant=True),
+                    )
+
+                self.startup_state = StartupStateEnum.REGULAR
+
+            case StartType.MANUAL:
+                self.startup_state = StartupStateEnum.REGULAR
+
+            case StartType.UNKNOWN:
+                return
+
+        self.log.debug(f"{self.startup_state=:s}")
+        attach_on_startup = self.controller.config.vdr.attach_on_startup
+        self.log.debug(f"attach_on_startup: {attach_on_startup}")
 
         if (
-            startup == "auto" and start_t is not StartType.MANUAL
-        ) or startup == "never":
+            attach_on_startup == "auto" and start_t is not StartType.MANUAL
+        ) or attach_on_startup == "never":
             self.controller.expect_user_activity = True
         return await self._start()
 
