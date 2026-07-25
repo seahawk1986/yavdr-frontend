@@ -6,6 +6,7 @@ from pathlib import Path
 import re
 import subprocess
 from collections.abc import Callable, Mapping, Coroutine
+import time
 from typing import Any, cast
 
 import sdbus
@@ -182,11 +183,12 @@ class DelayedRepeatableTask:
         self._task = None
         self._stopped = asyncio.Event()
 
-    async def _runner(self):
+    async def _runner(self) -> None:
         # call the callback method repeatably until it returns False
         logging.debug(f"starting _runner for {self.callback.__name__}")
         try:
             while not self._stopped.is_set():
+                ts = time.monotonic()
                 logging.debug(f"wait for timeout to call '{self.callback.__name__}'")
                 try:
                     # Wait for either stop signal or timeout
@@ -195,7 +197,10 @@ class DelayedRepeatableTask:
                         f"stopping DelayedRepeatableTask for {self.callback.__name__}"
                     )
                     break  # If we got here, stop was signaled
-                except asyncio.TimeoutError:
+                except TimeoutError:
+                    logging.debug(
+                        f"waited for at least {self.interval} s: {time.monotonic() - ts} s"
+                    )
                     pass  # Timeout expired as expected - try to run the callback
 
                 result = self.callback()
@@ -214,7 +219,7 @@ class DelayedRepeatableTask:
                 f"shutting down DelayedRepeatableTask for {self.callback.__name__}"
             )
 
-    def start(self):
+    def start(self) -> None:
         logging.debug(f"called start for {self.callback.__name__}")
         if not self._task or self._task.done():
             self._stopped.clear()
@@ -223,7 +228,7 @@ class DelayedRepeatableTask:
         else:
             logging.debug(f"do nothing: {self._task=}")
 
-    def stop(self):
+    def stop(self) -> None:
         logging.debug("called stop for DelayedRepeatableTask")
         self._stopped.set()
         if self._task:

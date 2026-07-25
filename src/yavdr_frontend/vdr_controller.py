@@ -436,7 +436,7 @@ class VDRController(FrontendProtocol):
                     shutdown_delay = 5 * 60  # 5 Minutes
                     await self.controller.delay(
                         shutdown_delay,
-                        self.controller.poweroff(instant=True),
+                        self.controller.after_recording_poweroff(),
                     )
 
                 self.startup_state = StartupStateEnum.REGULAR

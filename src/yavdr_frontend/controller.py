@@ -489,13 +489,15 @@ class Controller(NeedsControllerProtocol):
         return True
 
     async def delay(self, timeout: float, coro: Coroutine[Any, Any, Any]):
+        """wait for delay before trying to execute the coroutine"""
         await asyncio.sleep(timeout)
         await self.shutdown_queue.put(coro)
 
-    async def repeat(self, timeout: float, coro: Coroutine[Any, Any, Any]):
-        while True:
-            await asyncio.sleep(timeout)
-            await self.shutdown_queue.put(coro)
+    # TODO: is there a use-case for this method?
+    # async def repeat(self, timeout: float, coro: Coroutine[Any, Any, Any]):
+    #     while True:
+    #         await asyncio.sleep(timeout)
+    #         await self.shutdown_queue.put(coro)
 
     async def process_shutdown_requests(self):
         while True:
@@ -507,6 +509,28 @@ class Controller(NeedsControllerProtocol):
         if self.poweroff_timer:
             self.poweroff_timer.stop()
         self.poweroff_timer = None
+
+    async def after_recording_poweroff(self):
+        self.log.debug("started after_recording_poweroff method")
+        self.expect_user_activity = True
+
+        if self.current_frontend:
+            timeout: float = self.current_frontend.attempt_shutdown_timeout
+        else:
+            timeout = 60 * 5
+        # await asyncio.sleep((timeout))
+
+        prepare_shutdown = partial(self.prepare_shutdown, instant=False)
+        # make sure it has a __name__ attribute
+        prepare_shutdown.__name__ = self.prepare_shutdown.__name__  # pyright: ignore[reportAttributeAccessIssue]
+
+        self.shutdown_task = DelayedRepeatableTask(
+            interval=timeout, callback=prepare_shutdown
+        )
+        self.shutdown_task.start()
+        await asyncio.sleep(0.1)
+        self.log.debug("created shutdown_task")
+        return False  # ensure this method isn't called repeatedly
 
     async def poweroff(self, args: list[str] | None = None, instant: bool = False):
         self.log.debug(f"called poweroff({instant=})")
@@ -543,7 +567,7 @@ class Controller(NeedsControllerProtocol):
             await self.poweroff()
 
     # General order of shutdown request:
-    # prepare_shutdown -> attempt_shutdown - >
+    # prepare_shutdown -> attempt_shutdown ->
     async def prepare_shutdown(self, instant: bool = False) -> bool:
         timeout = 10 if instant else 60 * 5
         self.log.debug("called prepare_shutdown")
