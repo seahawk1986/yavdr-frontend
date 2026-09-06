@@ -72,6 +72,7 @@ def load_facts() -> tuple[OutputConnector | None, OutputConnector | None]:
 
     except Exception as err:
         log.exception(f"could not load display facts and config: {err}")
+        return None, None
     else:
         if not display_config.primary:
             raise ValueError("no primary display")
