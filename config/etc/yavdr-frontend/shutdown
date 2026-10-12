@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+frontend-dbus-send quit >/dev/null
+systemctl poweroff || {
+	echo "This script must be run using sudo or as root"
+	exit 1
+}

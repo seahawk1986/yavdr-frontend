@@ -1,0 +1,2 @@
+etc/yavdr-frontend/shutdown usr/bin/yavdr-shutdown
+etc/vdr/shutdown-hooks/S99.yavdr-frontend usr/share/vdr/shutdown-hooks/S99.yavdr-frontend

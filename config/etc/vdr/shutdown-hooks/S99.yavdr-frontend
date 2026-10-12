@@ -1,0 +1,5 @@
+#!/bin/bash
+if busctl --system status "de.yavdr.frontend" &>/dev/null
+then
+    echo SHUTDOWNCMD=yavdr-shutdown
+fi
